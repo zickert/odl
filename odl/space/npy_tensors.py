@@ -31,7 +31,7 @@ from odl.util import dtype_str, signature_string, is_real_dtype
 from odl.util.ufuncs import NumpyTensorSetUfuncs
 
 
-__all__ = ('NumpyTensorSet', 'NumpyTensorSpace')
+__all__ = ('NumpyTensorSet', 'NumpyTensorSpace', 'MatrixOperator')
 
 
 _BLAS_DTYPES = (np.dtype('float32'), np.dtype('float64'),
@@ -506,7 +506,7 @@ class NumpyGeneralizedTensor(GeneralizedTensor):
 
     @property
     def ufuncs(self):
-        """`NumpyTensorSetUfuncs`, access to numpy style ufuncs.
+        """`NumpyTensorSetUfuncs`, access to Numpy style ufuncs.
 
         Notes
         -----
