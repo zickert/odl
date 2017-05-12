@@ -464,7 +464,7 @@ class RectGrid(Set):
         if other is self:
             return True
 
-        return (isinstance(other, RectGrid) and
+        return (type(other) is type(self) and
                 self.ndim == other.ndim and
                 self.shape == other.shape and
                 all(np.allclose(vec_s, vec_o, atol=atol, rtol=0.0)
@@ -478,7 +478,7 @@ class RectGrid(Set):
         if other is self:
             return True
 
-        return (isinstance(other, RectGrid) and
+        return (type(other) is type(self) and
                 self.shape == other.shape and
                 all(np.array_equal(vec_s, vec_o)
                     for (vec_s, vec_o) in zip(self.coord_vectors,
