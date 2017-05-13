@@ -432,6 +432,29 @@ def test_power_RxR():
     assert all_equal([v1, v2], u)
 
 
+def test_power_shape():
+    """Check if shape and size are correct for higher-order power spaces."""
+    r2 = odl.rn(2)
+    r3 = odl.rn(3)
+
+    empty = odl.ProductSpace(field=odl.RealNumbers())
+    empty2 = odl.ProductSpace(r2, 0)
+    assert empty.shape == empty2.shape == ()
+    assert empty.size == empty2.size == 0
+
+    r2xr3 = odl.ProductSpace(r2, r3)
+    assert r2xr3.shape == (2,)
+    assert r2xr3.size == 2
+
+    r2xr3_4 = odl.ProductSpace(r2xr3, 4)
+    assert r2xr3_4.shape == (4, 2)
+    assert r2xr3_4.size == 8
+
+    r2xr3_4_5 = odl.ProductSpace(r2xr3_4, 5)
+    assert r2xr3_4_5.shape == (5, 4, 2)
+    assert r2xr3_4_5.size == 40
+
+
 def test_power_lincomb():
     H = odl.rn(2)
     HxH = odl.ProductSpace(H, 2)
