@@ -1,0 +1,6 @@
+WeightedSumSamplingOperator.variant
+=======================================================
+
+.. currentmodule:: odl.operator.fn_ops
+
+.. autoattribute:: WeightedSumSamplingOperator.variant

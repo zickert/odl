@@ -1,0 +1,6 @@
+SamplingOperator.domain
+===========================================
+
+.. currentmodule:: odl.operator.fn_ops
+
+.. autoattribute:: SamplingOperator.domain

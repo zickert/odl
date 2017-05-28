@@ -1,0 +1,6 @@
+SamplingOperator.variant
+============================================
+
+.. currentmodule:: odl.operator.fn_ops
+
+.. autoattribute:: SamplingOperator.variant

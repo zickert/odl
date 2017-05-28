@@ -1,0 +1,6 @@
+SamplingOperator.sampling_points
+====================================================
+
+.. currentmodule:: odl.operator.fn_ops
+
+.. autoattribute:: SamplingOperator.sampling_points

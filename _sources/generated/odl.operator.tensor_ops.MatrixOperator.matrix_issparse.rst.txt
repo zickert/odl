@@ -1,0 +1,6 @@
+MatrixOperator.matrix_issparse
+======================================================
+
+.. currentmodule:: odl.operator.tensor_ops
+
+.. autoattribute:: MatrixOperator.matrix_issparse

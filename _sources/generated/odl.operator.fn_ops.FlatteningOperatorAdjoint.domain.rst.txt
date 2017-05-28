@@ -1,0 +1,6 @@
+FlatteningOperatorAdjoint.domain
+====================================================
+
+.. currentmodule:: odl.operator.fn_ops
+
+.. autoattribute:: FlatteningOperatorAdjoint.domain

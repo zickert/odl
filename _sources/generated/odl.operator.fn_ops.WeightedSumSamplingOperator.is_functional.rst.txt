@@ -1,0 +1,6 @@
+WeightedSumSamplingOperator.is_functional
+=============================================================
+
+.. currentmodule:: odl.operator.fn_ops
+
+.. autoattribute:: WeightedSumSamplingOperator.is_functional

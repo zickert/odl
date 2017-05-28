@@ -1,0 +1,6 @@
+SamplingOperator.range
+==========================================
+
+.. currentmodule:: odl.operator.fn_ops
+
+.. autoattribute:: SamplingOperator.range

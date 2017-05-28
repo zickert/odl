@@ -1,0 +1,6 @@
+FlatteningOperator.order
+============================================
+
+.. currentmodule:: odl.operator.fn_ops
+
+.. autoattribute:: FlatteningOperator.order

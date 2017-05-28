@@ -1,0 +1,6 @@
+WeightedSumSamplingOperator.range
+=====================================================
+
+.. currentmodule:: odl.operator.fn_ops
+
+.. autoattribute:: WeightedSumSamplingOperator.range

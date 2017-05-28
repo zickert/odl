@@ -1,0 +1,6 @@
+FlatteningOperatorAdjoint.is_functional
+===========================================================
+
+.. currentmodule:: odl.operator.fn_ops
+
+.. autoattribute:: FlatteningOperatorAdjoint.is_functional

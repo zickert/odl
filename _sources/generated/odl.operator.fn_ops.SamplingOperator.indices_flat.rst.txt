@@ -1,0 +1,6 @@
+SamplingOperator.indices_flat
+=================================================
+
+.. currentmodule:: odl.operator.fn_ops
+
+.. autoattribute:: SamplingOperator.indices_flat

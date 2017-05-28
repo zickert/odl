@@ -1,0 +1,6 @@
+FlatteningOperatorAdjoint.inverse
+=====================================================
+
+.. currentmodule:: odl.operator.fn_ops
+
+.. autoattribute:: FlatteningOperatorAdjoint.inverse

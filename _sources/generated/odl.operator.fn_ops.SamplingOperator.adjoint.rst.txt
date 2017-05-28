@@ -1,0 +1,6 @@
+SamplingOperator.adjoint
+============================================
+
+.. currentmodule:: odl.operator.fn_ops
+
+.. autoattribute:: SamplingOperator.adjoint

@@ -1,0 +1,6 @@
+SamplingOperator.is_linear
+==============================================
+
+.. currentmodule:: odl.operator.fn_ops
+
+.. autoattribute:: SamplingOperator.is_linear

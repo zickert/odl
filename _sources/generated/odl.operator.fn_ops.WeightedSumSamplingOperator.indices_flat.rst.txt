@@ -1,0 +1,6 @@
+WeightedSumSamplingOperator.indices_flat
+============================================================
+
+.. currentmodule:: odl.operator.fn_ops
+
+.. autoattribute:: WeightedSumSamplingOperator.indices_flat

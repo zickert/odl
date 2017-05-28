@@ -1,0 +1,6 @@
+FlatteningOperator.is_linear
+================================================
+
+.. currentmodule:: odl.operator.fn_ops
+
+.. autoattribute:: FlatteningOperator.is_linear

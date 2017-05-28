@@ -1,0 +1,6 @@
+SamplingOperator.inverse
+============================================
+
+.. currentmodule:: odl.operator.fn_ops
+
+.. autoattribute:: SamplingOperator.inverse
