@@ -193,7 +193,7 @@ def modulation_transfer_function(x, **kwargs):
     alpha = kwargs.pop('mtf_alpha')
     beta = kwargs.pop('mtf_beta')
 
-    norm_sq = np.sum(xi ** 2 for xi in x[1:])
+    norm_sq = np.sum(xi ** 2 for xi in x[1:]) / M**2
 
     result = a / (1 + alpha * norm_sq) + b / (1 + beta * norm_sq) + c
 
