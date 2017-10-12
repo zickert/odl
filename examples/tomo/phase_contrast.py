@@ -162,7 +162,7 @@ prop_dist = 0.1
 # Discrete reconstruction space: discretized functions on the cube
 # [-20, 20]^3 with 300 samples per dimension.
 reco_space = odl.uniform_discr(min_pt=[-0.1] * 3, max_pt=[0.1] * 3,
-                               shape=[300] * 3, dtype='complex64')
+                               shape=[300] * 3, dtype='complex128')
 
 # Make a parallel beam geometry with flat detector
 # Angles: uniformly spaced, n = 360, min = 0, max = 2 * pi
@@ -173,11 +173,12 @@ detector_partition = odl.uniform_partition([-0.16] * 2, [0.16] * 2,
 
 geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition)
 ray_trafo = odl.tomo.RayTransform(reco_space, geometry)
-ft = odl.trafos.FourierTransform(ray_trafo.range, axes=[1, 2], impl='pyfftw')
+ft = odl.trafos.FourierTransform(ray_trafo.range, axes=[1, 2])
 prop_kernel = ft.range.element(propagation_kernel_ft, wavenum=wavenum,
                                prop_dist=prop_dist)
 
 prop_op = ft.inverse * prop_kernel * ft
+prop_op = 1e-4 * prop_op
 
 plane_wave = prop_op.range.element(
     np.exp(1j * wavenum * prop_dist) * prop_op.range.one())
@@ -186,16 +187,22 @@ intens_op = IntensityOperator(prop_op.range)
 
 single_dist_phase_op = intens_op * (prop_op * ray_trafo + plane_wave)
 
-phantom = (1e-5 * odl.phantom.shepp_logan(reco_space, modified=True) +
-           1e-5j * odl.phantom.shepp_logan(reco_space, modified=True))
+
+phantom = (1 + 1j) * odl.phantom.shepp_logan(reco_space, modified=True)
 data = single_dist_phase_op(phantom)
 
-reco = ray_trafo.domain.zero()
+reco = phantom * 0.0  # ray_trafo.domain.zero()
 callback = (odl.solvers.CallbackPrintIteration() &
             odl.solvers.CallbackShow())
-odl.solvers.conjugate_gradient_normal(single_dist_phase_op, reco, data,
-                                      niter=10, callback=callback)
+#odl.solvers.conjugate_gradient_normal(single_dist_phase_op, reco, data,
+#                                      niter=10, callback=callback)
 
+func = odl.solvers.L2NormSquared(data.space).translated(data) * single_dist_phase_op
+
+line_search = odl.solvers.BacktrackingLineSearch(func)
+
+odl.solvers.conjugate_gradient_nonlinear(func, reco, line_search=1e0, callback=callback,
+                                         nreset=50)
 
 lin_at_one = single_dist_phase_op.derivative(single_dist_phase_op.domain.one())
 backprop = lin_at_one.adjoint(data)
