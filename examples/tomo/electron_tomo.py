@@ -242,7 +242,13 @@ reco_space = odl.uniform_discr(min_pt=[-sample_height/2, -sample_height/2,
                                        -sample_height/2],
                                max_pt=[sample_height/2, sample_height/2,
                                        sample_height/2],
-                               shape=[300] * 3, dtype='complex64')
+                               shape=[300] * 3, dtype='complex128')
+
+
+#reco_space = odl.uniform_discr(min_pt=[-10]*3,
+#                               max_pt=[10]*3,
+#                               shape=[300] * 3, dtype='complex128')
+
 
 # Make a parallel beam geometry with flat detector
 # Angles: uniformly spaced, n = 61, min = -pi/3, max = pi /3
@@ -250,6 +256,10 @@ angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, 61)
 # Detector: uniformly sampled, n = (558, 558), min = (-30, -30), max = (30, 30)
 detector_partition = odl.uniform_partition([-det_size/M * 100] * 2,
                                            [det_size/M * 100] * 2, [200] * 2)
+
+#detector_partition = odl.uniform_partition([-10] * 2,
+#                                           [10] * 2, [200] * 2)
+
 
 geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition)
 ray_trafo = odl.tomo.RayTransform(reco_space, geometry)
@@ -277,16 +287,22 @@ mtf = ft_det.range.element(modulation_transfer_function, mtf_a=mtf_a,
 det_op = dose_per_img * gain * ft_det.inverse * mtf * ft_det
 
 forward_op = det_op * intens_op * optics_op * scattering_op
+#forward_op = scattering_op
 
 phantom = (1 * odl.phantom.shepp_logan(reco_space, modified=True) +
            1j * odl.phantom.shepp_logan(reco_space, modified=True))
 data = forward_op(phantom)
 
 reco = ray_trafo.domain.zero()
-#callback = (odl.solvers.CallbackPrintIteration() &
-#            odl.solvers.CallbackShow())
+callback = (odl.solvers.CallbackPrintIteration() &
+            odl.solvers.CallbackShow())
 #odl.solvers.conjugate_gradient_normal(forward_op, reco, data,
 #                                      niter=10, callback=callback)
+func = odl.solvers.L2NormSquared(data.space).translated(data) * forward_op
+
+
+odl.solvers.conjugate_gradient_nonlinear(func, reco, line_search=1e0, callback=callback,
+                                         nreset=50)
 
 
 lin_at_one = forward_op.derivative(forward_op.domain.one())
