@@ -4,7 +4,7 @@ import numpy as np
 from odl.contrib.mrc import (FileReaderMRC)
 import matplotlib.pyplot as plt
 
-dir_path = os.path.abspath('/home/zickert/One_particle/')
+dir_path = os.path.abspath('/home/zickert/TEM_reco_project/One_particle_new_simulation')
 file_path_phantom = os.path.join(dir_path, 'rna_phantom.mrc')
 file_path_re_map = os.path.join(dir_path, '1I3Q_map.mrc')
 file_path_im_map = os.path.join(dir_path, '1I3Q_abs_map.mrc')
@@ -23,7 +23,7 @@ with FileReaderMRC(file_path_im_map) as im_map_reader:
     im_map_header, im_map_asarray = im_map_reader.read()
 
 reco_space = odl.uniform_discr(min_pt=[-10] * 3, max_pt=[10] * 3,
-                               shape=[95, 100, 80], dtype='float32')
+                               shape=[142, 153, 157], dtype='complex64')
 reco_space_map = odl.uniform_discr(min_pt=[-10] * 3, max_pt=[10] * 3,
                                    shape=[142, 153, 157], dtype='complex64')
 
@@ -52,16 +52,16 @@ data_map = ray_trafo_map(complex_map)
 
 
 
-phantom.show(coords = [None,0,None])
+phantom.show(coords = [None,None,0])
 
 data.show(coords = [0,None,None])
-complex_map.show(coords = [None,0,None])
+complex_map.show(coords = [None,None,0])
 
 
-data_map.show(coords = [0,None,None])
+data_map.show(coords = [np.pi/3,None,None])
 
-data_nonoise_asarray_slice = data_nonoise_asarray[:,:,0]
-plt.imshow(data_nonoise_asarray_slice,cmap='gray')
+data_nonoise_asarray_slice = data_nonoise_asarray[:,:,30]
+plt.imshow(data_nonoise_asarray_slice)
 
 tr = np.transpose(data_nonoise_asarray)
 tr_data = ray_trafo_map.range.element(tr)
