@@ -64,6 +64,9 @@ def optics_imperfections(x, **kwargs):
     defocus = kwargs.pop('defocus')
 
     norm_sq = np.sum(xi ** 2 for xi in x[1:])
+    # Rescale the length of the vector to account for larger detector in this
+    # toy example
+    norm_sq *= (30 / (det_size / M * 100)) ** 2
     result = - (1 / (4 * wave_number)) * norm_sq * (norm_sq * spherical_abe /
                                                     wave_number ** 2 - 2 *
                                                     defocus)
@@ -100,7 +103,7 @@ def modulation_transfer_function(x, **kwargs):
 
 
 # %%
-
+det_size = 16e-6  # m
 wave_length = 0.0025e-9  # m
 wave_number = 2 * np.pi / wave_length
 
@@ -131,7 +134,10 @@ detector_partition = odl.uniform_partition(-30, 30, 512)
 
 geometry = odl.tomo.Parallel2dGeometry(angle_partition, detector_partition)
 ray_trafo = odl.tomo.RayTransform(reco_space, geometry)
-scattering_op = ray_trafo.range.one() + 0.001j * ray_trafo
+
+# Choose constant before ray_trafo so that the result is small enough for a
+# linearisation of the exponential to make sense.
+scattering_op = ray_trafo
 
 ft_ctf = odl.trafos.FourierTransform(scattering_op.range, axes=1)
 
@@ -140,23 +146,22 @@ optics_imperf = ft_ctf.range.element(optics_imperfections,
                                      spherical_abe=spherical_abe,
                                      defocus=defocus)
 ctf = optics_imperf
-ctf = ctf.space.one()
-optics_op =  ft_ctf.inverse * ctf * ft_ctf
+optics_op = ft_ctf.inverse * ctf * ft_ctf
 
 intens_op = IntensityOperator(optics_op.range)
 
-#forward_op = intens_op * optics_op * scattering_op
 forward_op = intens_op * optics_op * scattering_op
+#forward_op = optics_op * scattering_op
 
-phantom = (1 * odl.phantom.shepp_logan(reco_space, modified=True) +
-           1j * odl.phantom.shepp_logan(reco_space, modified=True))
+phantom = (1+1j) * odl.phantom.shepp_logan(reco_space, modified=True)
+
 data = forward_op(phantom)
 
-reco = ray_trafo.domain.zero()
+reco = 0.01 * phantom
 callback = (odl.solvers.CallbackPrintIteration() &
             odl.solvers.CallbackShow())
 odl.solvers.conjugate_gradient_normal(forward_op, reco, data,
-                                      niter=10, callback=callback)
+                                      niter=100, callback=callback)
 #func = odl.solvers.L2NormSquared(data.space).translated(data) * forward_op
 #
 #
