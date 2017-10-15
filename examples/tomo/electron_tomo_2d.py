@@ -65,7 +65,7 @@ def optics_imperfections(x, **kwargs):
 
     norm_sq = np.sum(xi ** 2 for xi in x[1:])
     # Rescale the length of the vector to account for larger detector in this
-    # toy example
+    # 2D toy example
     norm_sq *= (30 / (det_size / M * 100)) ** 2
     result = - (1 / (4 * wave_number)) * norm_sq * (norm_sq * spherical_abe /
                                                     wave_number ** 2 - 2 *
@@ -145,7 +145,7 @@ optics_imperf = ft_ctf.range.element(optics_imperfections,
                                      wave_number=wave_number,
                                      spherical_abe=spherical_abe,
                                      defocus=defocus)
-ctf = optics_imperf
+ctf = 2 * np.pi * optics_imperf
 optics_op = ft_ctf.inverse * ctf * ft_ctf
 
 intens_op = IntensityOperator(optics_op.range)
@@ -157,11 +157,11 @@ phantom = (1+1j) * odl.phantom.shepp_logan(reco_space, modified=True)
 
 data = forward_op(phantom)
 
-reco = 0.01 * phantom
+reco = 1.01*phantom
 callback = (odl.solvers.CallbackPrintIteration() &
             odl.solvers.CallbackShow())
 odl.solvers.conjugate_gradient_normal(forward_op, reco, data,
-                                      niter=100, callback=callback)
+                                      niter=4, callback=callback)
 #func = odl.solvers.L2NormSquared(data.space).translated(data) * forward_op
 #
 #
