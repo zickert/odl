@@ -104,12 +104,21 @@ def modulation_transfer_function(x, **kwargs):
 
 
 # %%
+dir_path = os.path.abspath('/home/zickert/TEM_reco_project/One_particle_new_simulation')
+file_path_phantom = os.path.join(dir_path, 'rna_phantom.mrc')
+file_path_phantom_abs = os.path.join(dir_path, 'rna_phantom_abs.mrc')
+file_path_tiltseries = os.path.join(dir_path, 'tiltseries.mrc')
+file_path_tiltseries_nonoise = os.path.join(dir_path, 'tiltseries_nonoise.mrc')
 
-file_path_map = os.path.abspath('/home/zickert/One_particle/1I3Q_map.mrc')
+with FileReaderMRC(file_path_phantom) as phantom_reader:
+    phantom_header, phantom_asarray = phantom_reader.read()
+with FileReaderMRC(file_path_phantom_abs) as phantom_abs_reader:
+    phantom_abs_header, phantom_abs_asarray = phantom_abs_reader.read()
+with FileReaderMRC(file_path_tiltseries) as tiltseries_reader:
+    tiltseries_header, data_asarry = tiltseries_reader.read()
+with FileReaderMRC(file_path_tiltseries_nonoise) as tiltseries_nonoise_reader:
+    tiltseries_nonoise_header, data_nonoise_asarray = tiltseries_nonoise_reader.read()
 
-file_path_abs_map = os.path.abspath('/home/zickert/One_particle/1I3Q_abs_map.mrc')
-
-file_path_phantom = os.path.abspath('/home/zickert/One_particle/rna_phantom.mrc')
 
 #  Define some physical constants
 e_mass = 9.11e-31  # kg
@@ -148,20 +157,23 @@ mtf_beta = 40
 det_size = 16e-6  # m
 det_area = det_size ** 2  # m^2
 
-reco_space = odl.uniform_discr(min_pt=[-sample_height/2, -sample_height/2,
-                                       -sample_height/2],
-                               max_pt=[sample_height/2, sample_height/2,
-                                       sample_height/2],
-                               shape=[142,153,157], dtype='complex64')
+reco_space = odl.uniform_discr(min_pt=[-95e-9/2, -100e-9/2,
+                                       -80e-9/2],
+                               max_pt=[95e-9/2, 100e-9/2,
+                                       80e-9/2],
+                               shape=[95, 100, 80], dtype='complex128')
 
-# Make a parallel beam geometry with flat detector
-# Angles: uniformly spaced, n = 61, min = -pi/3, max = pi /3
 angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, 61)
-# Detector: uniformly sampled, n = (558, 558), min = (-30, -30), max = (30, 30)
-detector_partition = odl.uniform_partition([-det_size/M * 1000] * 2,
-                                           [det_size/M * 1000] * 2, [200] * 2)
+detector_partition = odl.uniform_partition([-det_size/M * 100] * 2,
+                                           [det_size/M * 100] * 2, [200] * 2)
 
-geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition)
+# The x-axis is the tilt-axis.
+# Check that the geometry matches the one from TEM-simulator!
+# In particular, check that det_pos_init and det_axes_init are correct.
+geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition,
+                                           axis=(1, 0, 0),
+                                           det_pos_init=(0, 0, -1),
+                                           det_axes_init=((1, 0, 0), (0, 1, 0)))
 ray_trafo = odl.tomo.RayTransform(reco_space, geometry)
 scattering_op = ray_trafo.range.one() + 1j*sigma * ray_trafo
 
@@ -180,6 +192,7 @@ optics_op = optics_op_cst * ft_ctf.inverse * ctf * ft_ctf
 
 intens_op = IntensityOperator(optics_op.range)
 
+# Check behaviour of the MTF
 ft_det = odl.trafos.FourierTransform(intens_op.range, axes=[1, 2])
 mtf = ft_det.range.element(modulation_transfer_function, mtf_a=mtf_a,
                            mtf_b=mtf_b, mtf_c=mtf_c, mtf_alpha=mtf_alpha,
@@ -188,21 +201,8 @@ det_op = det_area * dose_per_img * gain * ft_det.inverse * mtf * ft_det
 
 forward_op = det_op * intens_op * optics_op * scattering_op
 
-with FileReaderMRC(file_path_map) as map_reader:
-    map_header, map_data = map_reader.read()
-with FileReaderMRC(file_path_abs_map) as abs_map_reader:
-    abs_map_header, abs_map_data = abs_map_reader.read()
-with FileReaderMRC(file_path_phantom) as phantom_reader:
-    phantom_header, phantom_data = phantom_reader.read()
 
-
-phantom_map = reco_space.element(map_data)
-phantom_abs_map = reco_space.element(abs_map_data)
-phantom = phantom_map + 1j * phantom_abs_map
-
-phantom = phantom - 4.877 - 0.824j
-
-
+phantom = reco_space.element(phantom_asarray + 1j * phantom_abs_asarray)
 data = forward_op(phantom)
 
 reco = ray_trafo.domain.zero()
