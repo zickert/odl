@@ -164,8 +164,8 @@ reco_space = odl.uniform_discr(min_pt=[-95e-9/2, -100e-9/2,
                                shape=[95, 100, 80], dtype='complex128')
 
 angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, 61)
-detector_partition = odl.uniform_partition([-det_size/M * 100] * 2,
-                                           [det_size/M * 100] * 2, [200] * 2)
+detector_partition = odl.uniform_partition([-det_size/M * 200/2] * 2,
+                                           [det_size/M * 200/2] * 2, [200] * 2)
 
 # The x-axis is the tilt-axis.
 # Check that the geometry matches the one from TEM-simulator!
