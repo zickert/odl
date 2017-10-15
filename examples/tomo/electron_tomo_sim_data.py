@@ -121,7 +121,7 @@ wave_number = 2 * np.pi / wave_length
 
 sigma = e_mass * e_charge / (wave_number * planck_bar ** 2)
 
-total_dose = 5000  # total electron dose
+total_dose = 5000 * 1e18  # total electron dose per m^2
 dose_per_img = total_dose / 61
 gain = 80  # average nr of digital counts per incident electron
 
@@ -146,6 +146,7 @@ mtf_beta = 40
 
 # Set size of detector pixels (before rescaling to account for magnification)
 det_size = 16e-6  # m
+det_area = det_size ** 2  # m^2
 
 reco_space = odl.uniform_discr(min_pt=[-sample_height/2, -sample_height/2,
                                        -sample_height/2],
@@ -173,7 +174,7 @@ optics_imperf = ft_ctf.range.element(optics_imperfections,
                                      wave_number=wave_number,
                                      spherical_abe=spherical_abe,
                                      defocus=defocus)
-ctf = pupil * optics_imperf
+ctf = 2 * np.pi * pupil * optics_imperf
 optics_op_cst = 1/(M*(2*np.pi)**2)
 optics_op = optics_op_cst * ft_ctf.inverse * ctf * ft_ctf
 
@@ -183,7 +184,7 @@ ft_det = odl.trafos.FourierTransform(intens_op.range, axes=[1, 2])
 mtf = ft_det.range.element(modulation_transfer_function, mtf_a=mtf_a,
                            mtf_b=mtf_b, mtf_c=mtf_c, mtf_alpha=mtf_alpha,
                            mtf_beta=mtf_beta)
-det_op = dose_per_img * gain * ft_det.inverse * mtf * ft_det
+det_op = det_area * dose_per_img * gain * ft_det.inverse * mtf * ft_det
 
 forward_op = det_op * intens_op * optics_op * scattering_op
 
