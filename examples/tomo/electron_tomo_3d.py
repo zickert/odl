@@ -64,6 +64,10 @@ def optics_imperfections(x, **kwargs):
     defocus = kwargs.pop('defocus')
 
     norm_sq = np.sum(xi ** 2 for xi in x[1:])
+    # Rescale the length of the vector to account for larger detector in this
+    # 2D toy example
+    norm_sq *= (30 / (det_size / M * 100)) ** 2
+
     result = - (1 / (4 * wave_number)) * norm_sq * (norm_sq * spherical_abe /
                                                     wave_number ** 2 - 2 *
                                                     defocus)
@@ -137,32 +141,24 @@ mtf_beta = 40
 # Set size of detector pixels (before rescaling to account for magnification)
 det_size = 16e-6  # m
 det_area = det_size **2  # m^2
-reco_space = odl.uniform_discr(min_pt=[-sample_height/2, -sample_height/2,
-                                       -sample_height/2],
-                               max_pt=[sample_height/2, sample_height/2,
-                                       sample_height/2],
+
+reco_space = odl.uniform_discr(min_pt=[-20]*3,
+                               max_pt=[20]*3,
                                shape=[300] * 3, dtype='complex128')
-
-
-#reco_space = odl.uniform_discr(min_pt=[-10]*3,
-#                               max_pt=[10]*3,
-#                               shape=[300] * 3, dtype='complex128')
 
 
 # Make a parallel beam geometry with flat detector
 # Angles: uniformly spaced, n = 61, min = -pi/3, max = pi /3
 angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, 61)
 # Detector: uniformly sampled, n = (558, 558), min = (-30, -30), max = (30, 30)
-detector_partition = odl.uniform_partition([-det_size/M * 100] * 2,
-                                           [det_size/M * 100] * 2, [200] * 2)
 
-#detector_partition = odl.uniform_partition([-10] * 2,
-#                                           [10] * 2, [200] * 2)
+detector_partition = odl.uniform_partition([-30] * 2,
+                                           [30] * 2, [200] * 2)
 
 
 geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition)
 ray_trafo = odl.tomo.RayTransform(reco_space, geometry)
-scattering_op = ray_trafo.range.one() + 1j*sigma * ray_trafo
+scattering_op = ray_trafo.range.one() + 0.01j * ray_trafo
 
 ft_ctf = odl.trafos.FourierTransform(scattering_op.range, axes=[1, 2])
 pupil = ft_ctf.range.element(pupil_function, aper_rad=aper_rad,
@@ -173,9 +169,10 @@ optics_imperf = ft_ctf.range.element(optics_imperfections,
                                      wave_number=wave_number,
                                      spherical_abe=spherical_abe,
                                      defocus=defocus)
-ctf = 2 *np.pi * pupil * optics_imperf
-optics_op_cst = 1/(M*(2*np.pi)**2)
-optics_op = optics_op_cst * ft_ctf.inverse * ctf * ft_ctf
+
+# Leave out pupil-function since it has no effect
+ctf = optics_imperf
+optics_op = ft_ctf.inverse * ctf * ft_ctf
 
 intens_op = IntensityOperator(optics_op.range)
 
@@ -185,23 +182,26 @@ mtf = ft_det.range.element(modulation_transfer_function, mtf_a=mtf_a,
                            mtf_beta=mtf_beta)
 det_op = det_area * dose_per_img * gain * ft_det.inverse * mtf * ft_det
 
-forward_op = det_op * intens_op * optics_op * scattering_op
-#forward_op = scattering_op
+# Leave out det_op first, need to check that MTF does what it should
+forward_op = intens_op * optics_op * scattering_op
 
-phantom = (1 * odl.phantom.shepp_logan(reco_space, modified=True) +
-           1j * odl.phantom.shepp_logan(reco_space, modified=True))
+phantom = (1+1j) * odl.phantom.shepp_logan(reco_space, modified=True)
+
 data = forward_op(phantom)
 
-reco = ray_trafo.domain.zero()
+reco = reco_space.zero()
 callback = (odl.solvers.CallbackPrintIteration() &
             odl.solvers.CallbackShow())
-#odl.solvers.conjugate_gradient_normal(forward_op, reco, data,
-#                                      niter=10, callback=callback)
-func = odl.solvers.L2NormSquared(data.space).translated(data) * forward_op
+odl.solvers.conjugate_gradient_normal(forward_op, reco, data,
+                                      niter=10, callback=callback)
+# non-linear cg must be adapted to complex case
+#func = odl.solvers.L2NormSquared(data.space).translated(data) * forward_op
+#odl.solvers.conjugate_gradient_nonlinear(func, reco, line_search=1e0, callback=callback,
+#                                         nreset=50)
 
-
-odl.solvers.conjugate_gradient_nonlinear(func, reco, line_search=1e0, callback=callback,
-                                         nreset=50)
+#func = odl.solvers.L2NormSquared(data.space).translated(data) * forward_op
+#odl.solvers.conjugate_gradient_nonlinear(func, reco, line_search=1e0, callback=callback,
+#                                         nreset=50)
 
 
 lin_at_one = forward_op.derivative(forward_op.domain.one())
