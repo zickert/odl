@@ -93,13 +93,19 @@ optics_imperf = ft_ctf.range.element(optics_imperfections,
 
 # Leave out pupil-function since it has no effect
 ctf = optics_imperf
+#ctf = optics_imperf.space.one()
 optics_op = ft_ctf.inverse * ctf * ft_ctf
 
 intens_op = IntensityOperator(optics_op.range)
 
+i_op_2 = IntensityOperator(reco_space)
+
 # Leave out detector operator for simplicity
-forward_op = intens_op * optics_op * scattering_op
+#forward_op = intens_op * optics_op * scattering_op
 #forward_op = optics_op * scattering_op
+forward_op = i_op_2
+forward_op = optics_op * scattering_op
+
 
 phantom = (1+1j) * odl.phantom.shepp_logan(reco_space, modified=True)
 
@@ -108,14 +114,16 @@ data = forward_op(phantom)
 reco = reco_space.zero()
 callback = (odl.solvers.CallbackPrintIteration() &
             odl.solvers.CallbackShow())
-odl.solvers.conjugate_gradient_normal(forward_op, reco, data,
-                                      niter=10, callback=callback)
+#odl.solvers.conjugate_gradient_normal(forward_op, reco, data,
+#                                      niter=10, callback=callback)
+odl.solvers.landweber(forward_op, reco, data, niter=10, callback=callback)
+
 # non-linear cg must be adapted to complex case
 #func = odl.solvers.L2NormSquared(data.space).translated(data) * forward_op
 #odl.solvers.conjugate_gradient_nonlinear(func, reco, line_search=1e0, callback=callback,
 #                                         nreset=50)
 
 
-lin_at_one = forward_op.derivative(forward_op.domain.one())
-backprop = lin_at_one.adjoint(data)
+lin_at_reco = forward_op.derivative(reco)
+backprop = lin_at_reco.adjoint(data)
 
