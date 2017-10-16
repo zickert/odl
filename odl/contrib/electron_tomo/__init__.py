@@ -8,7 +8,7 @@
 
 from __future__ import absolute_import
 
-__all__ = ('constant_phase_abs_ratio', 'intensity_op')
+__all__ = ()
 
 from .constant_phase_abs_ratio import *
 __all__ += constant_phase_abs_ratio.__all__
