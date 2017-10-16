@@ -7,9 +7,10 @@ standard_library.install_aliases()
 from builtins import super
 
 import numpy as np
+import pytest
 import odl
-from intensity_op import IntensityOperator
-from constant_phase_abs_ratio import ConstantPhaseAbsRatio
+from odl.contrib.electron_tomo.intensity_op import IntensityOperator
+from odl.contrib.electron_tomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
 
 
 def optics_imperfections(x, **kwargs):
@@ -56,7 +57,6 @@ def circular_mask(x, **kwargs):
     return norm_sq <= radius ** 2
 
 
-# %%
 det_size = 16e-6  # m
 wave_length = 0.0025e-9  # m
 wave_number = 2 * np.pi / wave_length
@@ -130,5 +130,18 @@ callback = (odl.solvers.CallbackPrintIteration() &
 #                                         nreset=50)
 
 
+if __name__ == '__main__':
+    odl.util.test_file(__file__)
 
+
+    x_adj = odl.phantom.white_noise(reco_space)
+    y_adj = odl.phantom.white_noise(forward_op_linearized.range)
+
+    Ax_adj = forward_op_linearized(x_adj)
+    ATy_adj = forward_op_linearized.adjoint(y_adj)
+
+    ip1 = x_adj.inner(ATy_adj)
+    ip2 = Ax_adj.inner(y_adj)
+
+    assert pytest.approx(ip1.real,rel=5e-2) == ip2.real
 
