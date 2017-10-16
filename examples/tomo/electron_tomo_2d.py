@@ -9,6 +9,8 @@ from builtins import super
 import numpy as np
 import odl
 from intensity_op import IntensityOperator
+from constant_phase_abs_ratio import ConstantPhaseAbsRatio
+
 
 def optics_imperfections(x, **kwargs):
     """Function encoding the phase shifts due to optics imperfections.
@@ -47,6 +49,13 @@ def optics_imperfections(x, **kwargs):
     return result
 
 
+def circular_mask(x, **kwargs):
+    radius = kwargs.pop('radius')
+    norm_sq = np.sum(xi ** 2 for xi in x[:])
+
+    return norm_sq <= radius ** 2
+
+
 # %%
 det_size = 16e-6  # m
 wave_length = 0.0025e-9  # m
@@ -72,13 +81,15 @@ mtf_alpha = 10
 mtf_beta = 40
 
 reco_space = odl.uniform_discr(
-    min_pt=[-20, -20], max_pt=[20, 20], shape=[300, 300], dtype='complex128')
+    min_pt=[-20, -20], max_pt=[20, 20], shape=[300, 300])
 
 angle_partition = odl.uniform_partition(0, np.pi, 360)
 detector_partition = odl.uniform_partition(-30, 30, 512)
 
 geometry = odl.tomo.Parallel2dGeometry(angle_partition, detector_partition)
-ray_trafo = odl.tomo.RayTransform(reco_space, geometry)
+ray_trafo = odl.tomo.RayTransform(reco_space.complex_space, geometry)
+
+ratio_op = ConstantPhaseAbsRatio(reco_space)
 
 # Choose constant before ray_trafo so that the result is small enough for a
 # linearisation of the exponential to make sense.
@@ -97,26 +108,23 @@ optics_op = ft_ctf.inverse * ctf * ft_ctf
 
 intens_op = IntensityOperator(optics_op.range)
 
+mask = reco_space.element(circular_mask, radius=19)
+
 # Leave out detector operator for simplicity
-forward_op = intens_op * optics_op * scattering_op
-forward_op = optics_op * scattering_op
+forward_op = intens_op * optics_op * scattering_op * ratio_op * mask
+forward_op_linearized = forward_op.derivative(reco_space.zero())
 
-phantom = (1+1j) * odl.phantom.shepp_logan(reco_space, modified=True)
+phantom = odl.phantom.shepp_logan(reco_space, modified=True)  # (1+1j) *
 
-data = forward_op(phantom)
+data = forward_op_linearized(phantom)
 
 reco = reco_space.zero()
 callback = (odl.solvers.CallbackPrintIteration() &
             odl.solvers.CallbackShow())
-odl.solvers.conjugate_gradient_normal(forward_op, reco, data,
-                                      niter=10, callback=callback)
+# odl.solvers.conjugate_gradient_normal(forward_op, reco, data,
+#                                      niter=100, callback=callback)
 
 # non-linear cg must be adapted to complex case
-#func = odl.solvers.L2NormSquared(data.space).translated(data) * forward_op
-#odl.solvers.conjugate_gradient_nonlinear(func, reco, line_search=1e0, callback=callback,
-#                                         nreset=50)
-
-
-lin_at_reco = forward_op.derivative(reco)
-backprop = lin_at_reco.adjoint(data)
-
+func = odl.solvers.L2NormSquared(data.space).translated(data) * forward_op_linearized
+odl.solvers.conjugate_gradient_nonlinear(func, reco, line_search=1e0, callback=callback,
+                                         nreset=50)
