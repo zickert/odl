@@ -1,6 +1,8 @@
 from odl.operator.operator import Operator
 from odl.discr.lp_discr import DiscreteLp
 
+__all__ = ('IntensityOperator',)
+
 
 class IntensityOperator(Operator):
 
