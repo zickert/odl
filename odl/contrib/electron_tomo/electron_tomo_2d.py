@@ -125,6 +125,10 @@ callback = (odl.solvers.CallbackPrintIteration() &
 #                                      niter=100, callback=callback)
 
 # non-linear cg must be adapted to complex case
-func = odl.solvers.L2NormSquared(data.space).translated(data) * forward_op_linearized
-odl.solvers.conjugate_gradient_nonlinear(func, reco, line_search=1e0, callback=callback,
-                                         nreset=50)
+#func = odl.solvers.L2NormSquared(data.space).translated(data) * forward_op_linearized
+#odl.solvers.conjugate_gradient_nonlinear(func, reco, line_search=1e0, callback=callback,
+#                                         nreset=50)
+
+
+
+
