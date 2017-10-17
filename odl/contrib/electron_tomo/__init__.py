@@ -15,3 +15,11 @@ __all__ += constant_phase_abs_ratio.__all__
 
 from .intensity_op import *
 __all__ += intensity_op.__all__
+
+from .exp_operator import *
+__all__ += exp_operator.__all__
+
+from .exp_operator import *
+__all__ += exp_operator.__all__
+
+
