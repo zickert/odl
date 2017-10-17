@@ -9,45 +9,11 @@ from builtins import super
 import numpy as np
 import pytest
 import odl
-from odl.contrib.electron_tomo.intensity_op import IntensityOperator
 from odl.contrib.electron_tomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
+from odl.contrib.electron_tomo.block_ray_trafo import BlockRayTransform
+from odl.contrib.electron_tomo.kaczmarz_plan import *
+from odl.contrib.electron_tomo.image_formation_etomo import *
 
-
-def optics_imperfections(x, **kwargs):
-    """Function encoding the phase shifts due to optics imperfections.
-
-
-    Notes
-    -----
-    The optics-imperfections function is defined as
-
-    .. math::
-
-        O(\\xi) = e^{iW(||\\xi\\|^2)},
-
-    where the function :math:`W` is defined as
-
-    .. math::
-
-        W(t) = -\\frac{1}{4k}t\\left(\\frac{C_s}{k^2}t-2\\Delta z\\right),
-
-    and where :math:`\kappa` is the wave number of the incoming electron wave,
-    :math:`C_s` is the third-order spherical abberation of the lens and
-    :math:`\\Delta z` is the defocus."""
-    wave_number = kwargs.pop('wave_number')
-    spherical_abe = kwargs.pop('spherical_abe')
-    defocus = kwargs.pop('defocus')
-
-    norm_sq = np.sum(xi ** 2 for xi in x[1:])
-    # Rescale the length of the vector to account for larger detector in this
-    # 2D toy example
-    norm_sq *= (30 / (det_size / M * 100)) ** 2
-    result = - (1 / (4 * wave_number)) * norm_sq * (norm_sq * spherical_abe /
-                                                    wave_number ** 2 - 2 *
-                                                    defocus)
-    result = np.exp(1j * result)
-
-    return result
 
 
 def circular_mask(x, **kwargs):
@@ -57,28 +23,18 @@ def circular_mask(x, **kwargs):
     return norm_sq <= radius ** 2
 
 
+obj_magnitude = 1e-2
+
+noise_lvl = 1e-2
+
 det_size = 16e-6  # m
 wave_length = 0.0025e-9  # m
 wave_number = 2 * np.pi / wave_length
-
-# Define sample diameter and height (we take the height at the edge)
-sample_diam = 1200e-9  # m
-sample_height = 150e-9  # m
-
-# Define properties of the optical system
-# Set focal_length to be the focal_length of the principal (first) lens !
 M = 25000.0
 aper_rad = 0.5*40e-6  # m
 focal_length = 2.7e-3  # m
 spherical_abe = 2.1e-3  # m
 defocus = 3e-6  # m
-
-# Define constants defining the modulation transfer function
-mtf_a = 0.7
-mtf_b = 0.2
-mtf_c = 0.1
-mtf_alpha = 10
-mtf_beta = 40
 
 reco_space = odl.uniform_discr(
     min_pt=[-20, -20], max_pt=[20, 20], shape=[300, 300])
@@ -87,55 +43,75 @@ angle_partition = odl.uniform_partition(0, np.pi, 360)
 detector_partition = odl.uniform_partition(-30, 30, 512)
 
 geometry = odl.tomo.Parallel2dGeometry(angle_partition, detector_partition)
-ray_trafo = odl.tomo.RayTransform(reco_space.complex_space, geometry)
+ray_trafo = BlockRayTransform(reco_space.complex_space, geometry)#odl.tomo.RayTransform(reco_space.complex_space, geometry)
 
 ratio_op = ConstantPhaseAbsRatio(reco_space)
 
 # Choose constant before ray_trafo so that the result is small enough for a
 # linearisation of the exponential to make sense.
-scattering_op = ray_trafo.range.one() + 0.01j * ray_trafo
-
-ft_ctf = odl.trafos.FourierTransform(scattering_op.range, axes=1)
-
-optics_imperf = ft_ctf.range.element(optics_imperfections,
-                                     wave_number=wave_number,
-                                     spherical_abe=spherical_abe,
-                                     defocus=defocus)
-
-# Leave out pupil-function since it has no effect
-ctf = optics_imperf
-optics_op = ft_ctf.inverse * ctf * ft_ctf
-
-intens_op = IntensityOperator(optics_op.range)
+imageFormation_op = make_imageFormationOp(ray_trafo.range, 
+                                          wave_number, spherical_abe, defocus, det_size, M,
+                                          obj_magnitude = obj_magnitude)
 
 mask = reco_space.element(circular_mask, radius=19)
 
 # Leave out detector operator for simplicity
-forward_op = intens_op * optics_op * scattering_op * ratio_op * mask
+forward_op = imageFormation_op * ray_trafo * ratio_op * mask
 forward_op_linearized = forward_op.derivative(reco_space.zero())
 
 phantom = odl.phantom.shepp_logan(reco_space, modified=True)  # (1+1j) *
 
-data = forward_op_linearized(phantom)
+data = forward_op(phantom) 
+noise = odl.phantom.white_noise(data.space)
+data += (noise_lvl * (data.space.one()-data).norm() / noise.norm()) * noise
 
 reco = reco_space.zero()
 callback = (odl.solvers.CallbackPrintIteration() &
             odl.solvers.CallbackShow())
-# odl.solvers.conjugate_gradient_normal(forward_op, reco, data,
+
+
+kaczmarz_plan = make_kaczmarz_plan(360, num_blocks_per_superblock = 6, method = 'random')
+
+ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
+
+
+F_post = make_imageFormationOp(ray_trafo_block.range, 
+                               wave_number, spherical_abe, defocus, det_size, M,
+                               obj_magnitude = obj_magnitude)
+F_pre = ratio_op * mask
+
+get_op = make_Op_blocks(kaczmarz_plan, ray_trafo,Op_pre=F_pre,Op_post=F_post)
+get_data = make_data_blocks(data, kaczmarz_plan)
+
+# Optional nonnegativity-constraint
+nonneg_constraint = odl.solvers.IndicatorNonnegativity(reco_space).proximal(1)
+def nonneg_projection(x):
+    x[:] = nonneg_constraint(x)
+
+reco = reco_space.zero()
+kaczmarz_reco_method(get_op, reco, get_data, len(kaczmarz_plan), 1e-1*obj_magnitude ** 2, 
+                     callback=callback,num_cycles=10, projection = nonneg_projection)
+
+
+#
+#odl.solvers.conjugate_gradient_normal(forward_op.derivative(reco), reco, data - forward_op(reco),
 #                                      niter=100, callback=callback)
 
 # non-linear cg must be adapted to complex case
-#func = odl.solvers.L2NormSquared(data.space).translated(data) * forward_op_linearized
-#odl.solvers.conjugate_gradient_nonlinear(func, reco, line_search=1e0, callback=callback,
-#                                         nreset=50)
+#func = odl.solvers.L2NormSquared(data.space).translated(data) * forward_op
+#odl.solvers.conjugate_gradient_nonlinear(func, reco, callback=callback)#, line_search=1e0, callback=callback,
+#                                         #nreset=50)
+#                                        
+# Landweber iterations
+#odl.solvers.landweber(forward_op, reco, data, 1000, omega=3e1, callback=callback)
 
 
 if __name__ == '__main__':
     odl.util.test_file(__file__)
 
 
-    x_adj = odl.phantom.white_noise(reco_space)
-    y_adj = odl.phantom.white_noise(forward_op_linearized.range)
+    x_adj = reco_space.one() + odl.phantom.white_noise(reco_space)
+    y_adj = forward_op_linearized.range.one() + odl.phantom.white_noise(forward_op_linearized.range)
 
     Ax_adj = forward_op_linearized(x_adj)
     ATy_adj = forward_op_linearized.adjoint(y_adj)
