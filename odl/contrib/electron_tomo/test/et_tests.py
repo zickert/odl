@@ -3,6 +3,7 @@ import odl
 import odl.contrib.fom
 import numpy as np
 
+
 from odl.util.testutils import simple_fixture
 from odl.contrib.electron_tomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
 from odl.contrib.electron_tomo.exp_operator import ExpOperator
@@ -13,13 +14,15 @@ reco_space_complex = simple_fixture('reco_space_complex',
                                     [odl.uniform_discr(0, 1, 10, dtype='complex')])
 
 def test_constant_phase_abs_ratio(reco_space):
-    ratio_op = ConstantPhaseAbsRatio(reco_space)
+    magnitude = np.random.rand()
+    ratio = np.random.rand()
+    ratio_op = ConstantPhaseAbsRatio(reco_space,abs_phase_ratio=ratio,magnitude_factor=magnitude)
 
     x_test = reco_space.one()
-    assert (1+1j)*ratio_op.range.element(x_test) == ratio_op(x_test)
+    assert (1j-ratio)*magnitude*ratio_op.range.element(x_test) == ratio_op(x_test)
 
     y_test = (2+1j)*ratio_op.range.one()
-    assert 3*ratio_op.domain.one() == ratio_op.adjoint(y_test)
+    assert all_almost_equal((1-2*ratio)*magnitude*ratio_op.domain.one(), ratio_op.adjoint(y_test)) # (-1j-ratio)*(2+1j))
 
     x_adj = odl.phantom.white_noise(reco_space)
     y_adj = odl.phantom.white_noise(ratio_op.range)
