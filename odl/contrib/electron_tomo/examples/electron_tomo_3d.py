@@ -4,16 +4,15 @@
 from __future__ import print_function, division, absolute_import
 from future import standard_library
 standard_library.install_aliases()
-from builtins import super
 
 import numpy as np
 import odl
 from timeit import timeit
 from odl.contrib.electron_tomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
 from odl.contrib.electron_tomo.block_ray_trafo import BlockRayTransform
-from odl.contrib.electron_tomo.kaczmarz_plan import *
+from odl.contrib.electron_tomo.kaczmarz_alg import *
 from odl.contrib.electron_tomo.image_formation_etomo import *
-
+from odl.contrib.electron_tomo.kaczmarz_util import *
 
 def circular_mask(x, **kwargs):
     radius = kwargs.pop('radius')

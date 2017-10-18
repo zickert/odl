@@ -10,6 +10,7 @@ import numpy as np
 import odl
 from odl.contrib.electron_tomo.intensity_op import IntensityOperator
 from odl.contrib.electron_tomo.exp_operator import ExpOperator
+from odl.contrib.electron_tomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
 
 def pupil_function(x, **kwargs):
     """Indicator function for the disc-shaped aperture, a.k.a. pupil function.
@@ -103,9 +104,11 @@ def optics_imperfections(x, **kwargs):
     return result
 
 def make_imageFormationOp(domain, wave_number, spherical_abe, defocus, det_size,
-                          magnification, obj_magnitude=1.0, **kwargs):
+                          magnification, abs_phase_ratio = 1.0, obj_magnitude=1.0, **kwargs):
     
-    exp_op = ExpOperator(domain)
+    ratio_op = ConstantPhaseAbsRatio(domain, abs_phase_ratio = abs_phase_ratio, 
+                                     magnitude_factor = obj_magnitude)    
+    exp_op = ExpOperator(ratio_op.range)
     
     ft_ctf = odl.trafos.FourierTransform(exp_op.range, axes=list(range(1,domain.ndim)))
     
@@ -121,5 +124,6 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus, det_size,
     optics_op = ft_ctf.inverse * ctf * ft_ctf
     intens_op = IntensityOperator(optics_op.range)
 
-    return intens_op * optics_op * exp_op * ((1j*obj_magnitude) * odl.IdentityOperator(exp_op.domain))
+
+    return intens_op * optics_op * exp_op * ratio_op
     
