@@ -11,8 +11,9 @@ import pytest
 import odl
 from odl.contrib.electron_tomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
 from odl.contrib.electron_tomo.block_ray_trafo import BlockRayTransform
-from odl.contrib.electron_tomo.kaczmarz_plan import *
+from odl.contrib.electron_tomo.kaczmarz_alg import *
 from odl.contrib.electron_tomo.image_formation_etomo import *
+from odl.contrib.electron_tomo.kaczmarz_util import *
 
 
 
@@ -43,9 +44,9 @@ angle_partition = odl.uniform_partition(0, np.pi, 360)
 detector_partition = odl.uniform_partition(-30, 30, 512)
 
 geometry = odl.tomo.Parallel2dGeometry(angle_partition, detector_partition)
-ray_trafo = BlockRayTransform(reco_space.complex_space, geometry)#odl.tomo.RayTransform(reco_space.complex_space, geometry)
+ray_trafo = BlockRayTransform(reco_space, geometry)#odl.tomo.RayTransform(reco_space.complex_space, geometry)
 
-ratio_op = ConstantPhaseAbsRatio(reco_space)
+
 
 # Choose constant before ray_trafo so that the result is small enough for a
 # linearisation of the exponential to make sense.
@@ -56,7 +57,7 @@ imageFormation_op = make_imageFormationOp(ray_trafo.range,
 mask = reco_space.element(circular_mask, radius=19)
 
 # Leave out detector operator for simplicity
-forward_op = imageFormation_op * ray_trafo * ratio_op * mask
+forward_op = imageFormation_op * ray_trafo * mask
 forward_op_linearized = forward_op.derivative(reco_space.zero())
 
 phantom = odl.phantom.shepp_logan(reco_space, modified=True)  # (1+1j) *
@@ -78,9 +79,9 @@ ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 F_post = make_imageFormationOp(ray_trafo_block.range, 
                                wave_number, spherical_abe, defocus, det_size, M,
                                obj_magnitude = obj_magnitude)
-F_pre = ratio_op * mask
+F_pre = odl.MultiplyOperator(mask,reco_space,reco_space)
 
-get_op = make_Op_blocks(kaczmarz_plan, ray_trafo,Op_pre=F_pre,Op_post=F_post)
+get_op = make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre, Op_post=F_post)
 get_data = make_data_blocks(data, kaczmarz_plan)
 
 # Optional nonnegativity-constraint
