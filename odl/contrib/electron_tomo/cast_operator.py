@@ -34,6 +34,10 @@ class CastOperator(Operator):
     @property
     def adjoint(self):
          return CastOperator(domain = self.range, range = self.domain)
+
+    @property
+    def inverse(self):
+         return CastOperator(domain = self.range, range = self.domain)
      
         
 if __name__ == '__main__':
