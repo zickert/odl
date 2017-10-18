@@ -33,7 +33,7 @@ def make_kaczmarz_plan(num_blocks, method='sequential',
 
 def make_Op_blocks(block_indices, Block_Op, Op_pre = None, Op_post = None):
 
-    if Op_post is not None:
+    if Op_pre is not None:
         if Op_post is not None:
             def get_Op(idx):
                 sub_op = Block_Op.get_sub_operator(block_indices[idx])
