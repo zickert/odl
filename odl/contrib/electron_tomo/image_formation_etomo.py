@@ -11,6 +11,9 @@ import odl
 from odl.contrib.electron_tomo.intensity_op import IntensityOperator
 from odl.contrib.electron_tomo.exp_operator import ExpOperator
 from odl.contrib.electron_tomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
+from odl.contrib.electron_tomo.cast_operator import CastOperator
+
+
 
 def pupil_function(x, **kwargs):
     """Indicator function for the disc-shaped aperture, a.k.a. pupil function.
@@ -58,14 +61,16 @@ def modulation_transfer_function(x, **kwargs):
     c = kwargs.pop('mtf_c')
     alpha = kwargs.pop('mtf_alpha')
     beta = kwargs.pop('mtf_beta')
+    magnification = kwargs.pop('magnification')
 
-    norm_sq = np.sum(xi ** 2 for xi in x[1:]) / M**2
+    norm_sq = np.sum(xi ** 2 for xi in x[1:]) / magnification**2
 
     result = a / (1 + alpha * norm_sq) + b / (1 + beta * norm_sq) + c
 
     return result
 
-def optics_imperfections(x, **kwargs):
+
+def optics_imperfections(xi, **kwargs):
     """Function encoding the phase shifts due to optics imperfections.
 
 
@@ -91,8 +96,9 @@ def optics_imperfections(x, **kwargs):
     defocus = kwargs.pop('defocus')
     det_size = kwargs.pop('det_size')
     magnification = kwargs.pop('magnification')
-
-    norm_sq = np.sum(xi ** 2 for xi in x[1:])
+    axes = kwargs.pop('axes')
+    
+    norm_sq = np.sum(xi[dim] ** 2 for dim in axes)
     # Rescale the length of the vector to account for larger detector in this
     # 2D toy example
     norm_sq *= (30 / (det_size / magnification * 100)) ** 2
@@ -103,27 +109,42 @@ def optics_imperfections(x, **kwargs):
 
     return result
 
-def make_imageFormationOp(domain, wave_number, spherical_abe, defocus, det_size,
-                          magnification, abs_phase_ratio = 1.0, obj_magnitude=1.0, **kwargs):
-    
-    ratio_op = ConstantPhaseAbsRatio(domain, abs_phase_ratio = abs_phase_ratio, 
-                                     magnitude_factor = obj_magnitude)    
+
+def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
+                          det_size, magnification, abs_phase_ratio=1.0,
+                          obj_magnitude=1.0, **kwargs):
+
+    ratio_op = ConstantPhaseAbsRatio(domain, abs_phase_ratio=abs_phase_ratio,
+                                     magnitude_factor=obj_magnitude)
     exp_op = ExpOperator(ratio_op.range)
     
-    ft_ctf = odl.trafos.FourierTransform(exp_op.range, axes=list(range(1,domain.ndim)))
-    
+#    if exp_op.range.shape[0] == 1:
+#        ft_0_domain = odl.uniform_discr(min_pt=[-20]*(domain.ndim-1), 
+#                                        max_pt=[20]*(domain.ndim-1), 
+#                                        shape=exp_op.range.shape[1:], dtype='complex128')
+#        ft_ctf_0 = odl.trafos.FourierTransform(ft_0_domain, impl='pyfftw')
+#        cast_ft_1 = CastOperator(exp_op.range, ft_ctf_0.domain)
+#        cast_ft_2 = CastOperator(ft_ctf_0.range, exp_op.range)
+#        ft_ctf = cast_ft_2 * ft_ctf_0 * cast_ft_1
+#        ft_axes = list(range(1, domain.ndim)) 
+#    else:
+    ft_axes = list(range(1, domain.ndim)) 
+    ft_ctf = odl.trafos.FourierTransform(exp_op.range,
+                                         axes=ft_axes,
+                                         impl='pyfftw')
+
+
     optics_imperf = ft_ctf.range.element(optics_imperfections,
                                          wave_number=wave_number,
                                          spherical_abe=spherical_abe,
                                          defocus=defocus,
                                          det_size=det_size,
-                                         magnification=magnification)
-    
+                                         magnification=magnification,
+                                         axes=ft_axes)
+
     # Leave out pupil-function since it has no effect
     ctf = optics_imperf
     optics_op = ft_ctf.inverse * ctf * ft_ctf
     intens_op = IntensityOperator(optics_op.range)
 
-
     return intens_op * optics_op * exp_op * ratio_op
-    
