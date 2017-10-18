@@ -1065,9 +1065,11 @@ def uniform_partition_fromgrid(grid, min_pt=None, max_pt=None):
         if xmin is None:
             cvec = grid.coord_vectors[ax]
             if len(cvec) == 1:
-                raise ValueError('in axis {}: cannot calculate `min_pt` with '
-                                 'only 1 grid point'.format(ax))
-            min_pt_vec[ax] = cvec[0] - (cvec[1] - cvec[0]) / 2
+                min_pt_vec[ax] = cvec[0] - 0.5
+                #raise ValueError('in axis {}: cannot calculate `min_pt` with '
+                #                 'only 1 grid point'.format(ax))
+            else:
+                min_pt_vec[ax] = cvec[0] - (cvec[1] - cvec[0]) / 2
         else:
             min_pt_vec[ax] = xmin
 
@@ -1076,9 +1078,11 @@ def uniform_partition_fromgrid(grid, min_pt=None, max_pt=None):
         if xmax is None:
             cvec = grid.coord_vectors[ax]
             if len(cvec) == 1:
-                raise ValueError('in axis {}: cannot calculate `max_pt` with '
-                                 'only 1 grid point'.format(ax))
-            max_pt_vec[ax] = cvec[-1] + (cvec[-1] - cvec[-2]) / 2
+                max_pt_vec[ax] = cvec[0] + 0.5
+            #    raise ValueError('in axis {}: cannot calculate `max_pt` with '
+            #                     'only 1 grid point'.format(ax))
+            else:
+                max_pt_vec[ax] = cvec[-1] + (cvec[-1] - cvec[-2]) / 2
         else:
             max_pt_vec[ax] = xmax
 
