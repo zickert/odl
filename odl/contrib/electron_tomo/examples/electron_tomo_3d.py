@@ -13,6 +13,7 @@ from odl.contrib.electron_tomo.block_ray_trafo import BlockRayTransform
 from odl.contrib.electron_tomo.kaczmarz_alg import *
 from odl.contrib.electron_tomo.image_formation_etomo import *
 from odl.contrib.electron_tomo.kaczmarz_util import *
+from odl.contrib.electron_tomo.support_constraint import spherical_mask
 
 def circular_mask(x, **kwargs):
     radius = kwargs.pop('radius')
@@ -25,6 +26,7 @@ def circular_mask(x, **kwargs):
 obj_magnitude = 1e-2
 noise_lvl = 1e-1
 num_angles = 120
+regpar = 1e-1
 
 wave_length = 0.0025e-9  # m
 wave_number = 2 * np.pi / wave_length
@@ -50,21 +52,31 @@ angle_partition = odl.uniform_partition(0, np.pi, num_angles)
 detector_partition = odl.uniform_partition([-30] * 2, [30] * 2, [200] * 2)
 
 geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition)
-ray_trafo = BlockRayTransform(reco_space.complex_space, geometry)
+ray_trafo = BlockRayTransform(reco_space, geometry)
 
 imageFormation_op = make_imageFormationOp(ray_trafo.range, 
-                                          wave_number, spherical_abe, defocus, det_size, M,
-                                          obj_magnitude = obj_magnitude)
+                                          wave_number, spherical_abe, defocus,
+                                          det_size, M,
+                                          obj_magnitude=obj_magnitude)
 
-ratio_op = ConstantPhaseAbsRatio(reco_space)
-mask = reco_space.element(circular_mask, radius=19)
+mask = reco_space.element(spherical_mask, radius=19)
 
-forward_op = imageFormation_op * ray_trafo * ratio_op * mask
+forward_op = imageFormation_op * ray_trafo  * mask
+
+f_op_lin = forward_op.derivative(reco_space.zero())
 
 phantom = odl.phantom.shepp_logan(reco_space, modified=True)
 
 
 data = forward_op(phantom)
+noise = odl.phantom.white_noise(data.space)
+data += (noise_lvl * (data.space.one()-data).norm() / noise.norm()) * noise
+
+data_lin = f_op_lin(phantom)
+noise = odl.phantom.white_noise(data.space)
+data_lin += (noise_lvl * (data.space.one()-data).norm() / noise.norm()) * noise
+
+
 data.show()
 
 
@@ -73,27 +85,41 @@ callback = (odl.solvers.CallbackPrintIteration() &
             odl.solvers.CallbackShow())
 
 
-kaczmarz_plan = make_kaczmarz_plan(num_angles, num_blocks_per_superblock = 10, method = 'random')
+kaczmarz_plan = make_kaczmarz_plan(num_angles, num_blocks_per_superblock=3,
+                                   method='random')
 
 ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 
 
-F_post = make_imageFormationOp(ray_trafo_block.range, 
-                               wave_number, spherical_abe, defocus, det_size, M,
-                               obj_magnitude = obj_magnitude)
-F_pre = ratio_op * mask
+F_post = make_imageFormationOp(ray_trafo_block.range,
+                               wave_number, spherical_abe, defocus, det_size,
+                               M, obj_magnitude=obj_magnitude)
 
-get_op = make_Op_blocks(kaczmarz_plan, ray_trafo,Op_pre=F_pre,Op_post=F_post)
+F_pre = odl.MultiplyOperator(mask, reco_space, reco_space)
+
+get_op = make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre, Op_post=F_post)
 get_data = make_data_blocks(data, kaczmarz_plan)
 
 # Optional nonnegativity-constraint
 nonneg_constraint = odl.solvers.IndicatorNonnegativity(reco_space).proximal(1)
+
+
 def nonneg_projection(x):
     x[:] = nonneg_constraint(x)
 
+
 reco = reco_space.zero()
-kaczmarz_reco_method(get_op, reco, get_data, len(kaczmarz_plan), 1e-1*obj_magnitude ** 2, 
-                     callback=callback, num_cycles=10, niter_CG = 4, projection = nonneg_projection)
+kaczmarz_reco_method(get_op, reco, get_data, len(kaczmarz_plan),
+                     regpar * obj_magnitude ** 2, callback=callback,
+                     num_cycles=3, niter_CG=10, do_CG_on_data_space = False,
+                     projection=nonneg_projection)
+
+
+reco_lin = reco_space.zero()
+
+odl.solvers.conjugate_gradient_normal(forward_op.derivative(reco_lin),
+                                      reco_lin, data - forward_op(reco_lin),
+                                      niter=100, callback=callback)
 
 
 #reco = reco_space.zero()
