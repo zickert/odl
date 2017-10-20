@@ -14,7 +14,6 @@ from odl.contrib.electron_tomo.constant_phase_abs_ratio import ConstantPhaseAbsR
 from odl.contrib.electron_tomo.cast_operator import CastOperator
 
 
-
 def pupil_function(x, **kwargs):
     """Indicator function for the disc-shaped aperture, a.k.a. pupil function.
 
@@ -97,11 +96,13 @@ def optics_imperfections(xi, **kwargs):
     det_size = kwargs.pop('det_size')
     magnification = kwargs.pop('magnification')
     axes = kwargs.pop('axes')
-    
+    rescale_ctf = kwargs.pop('rescale_ctf')
+
     norm_sq = np.sum(xi[dim] ** 2 for dim in axes)
-    # Rescale the length of the vector to account for larger detector in this
-    # 2D toy example
-    norm_sq *= (30 / (det_size / magnification * 100)) ** 2
+    if rescale_ctf:
+        # Rescale to account for larger detector in toy examples
+        rescale_factor = (30 / (det_size / magnification * 100)) ** 2
+        norm_sq *= rescale_factor
     result = - (1 / (4 * wave_number)) * norm_sq * (norm_sq * spherical_abe /
                                                     wave_number ** 2 - 2 *
                                                     defocus)
@@ -111,8 +112,9 @@ def optics_imperfections(xi, **kwargs):
 
 
 def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
-                          det_size, magnification, abs_phase_ratio=1.0,
-                          obj_magnitude=1.0, **kwargs):
+                          det_size, magnification, abs_phase_ratio=1,
+                          obj_magnitude=1,rescale_ctf=True,
+                          dose_per_img=1, gain=1, det_area=1, **kwargs):
 
     ratio_op = ConstantPhaseAbsRatio(domain, abs_phase_ratio=abs_phase_ratio,
                                      magnitude_factor=obj_magnitude)
@@ -128,11 +130,10 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
 #        ft_ctf = cast_ft_2 * ft_ctf_0 * cast_ft_1
 #        ft_axes = list(range(1, domain.ndim)) 
 #    else:
-    ft_axes = list(range(1, domain.ndim)) 
+    ft_axes = list(range(1, domain.ndim))
     ft_ctf = odl.trafos.FourierTransform(exp_op.range,
                                          axes=ft_axes,
                                          impl='pyfftw')
-
 
     optics_imperf = ft_ctf.range.element(optics_imperfections,
                                          wave_number=wave_number,
@@ -140,11 +141,26 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
                                          defocus=defocus,
                                          det_size=det_size,
                                          magnification=magnification,
-                                         axes=ft_axes)
+                                         axes=ft_axes,
+                                         rescale_ctf=rescale_ctf)
 
     # Leave out pupil-function since it has no effect
     ctf = optics_imperf
+
     optics_op = ft_ctf.inverse * ctf * ft_ctf
     intens_op = IntensityOperator(optics_op.range)
+    
+    optics_op_cst = 1/(magnification*(2*np.pi)**2)
+    det_op_cst = det_area * dose_per_img * gain
+    total_cst = optics_op_cst ** 2 * det_op_cst
+    
+    # Check behaviour of the MTF
+    #ft_det = odl.trafos.FourierTransform(intens_op.range, axes=[1, 2])
+    #mtf = ft_det.range.element(modulation_transfer_function, mtf_a=mtf_a,
+    #                           mtf_b=mtf_b, mtf_c=mtf_c, mtf_alpha=mtf_alpha,
+    #                           mtf_beta=mtf_beta)
+    #det_op_cst = det_area * dose_per_img * gain
+    #det_op = det_op_cst * ft_det.inverse * mtf * ft_det
 
+    
     return intens_op * optics_op * exp_op * ratio_op
