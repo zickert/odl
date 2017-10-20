@@ -4,106 +4,25 @@
 from __future__ import print_function, division, absolute_import
 from future import standard_library
 standard_library.install_aliases()
-from builtins import super
 
 import numpy as np
 
 import os
 import odl
-from intensity_op import IntensityOperator
+from odl.contrib.electron_tomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
+from odl.contrib.electron_tomo.block_ray_trafo import BlockRayTransform
+from odl.contrib.electron_tomo.kaczmarz_alg import *
+from odl.contrib.electron_tomo.image_formation_etomo import *
+from odl.contrib.electron_tomo.kaczmarz_util import *
+from odl.contrib.electron_tomo.support_constraint import spherical_mask
+from odl.contrib.electron_tomo.buffer_correction import buffer_correction
+
+
+import matplotlib.pyplot as plt 
+
 from odl.contrib.mrc import (
     FileReaderMRC, FileWriterMRC, mrc_header_from_params)
 
-
-def pupil_function(x, **kwargs):
-    """Indicator function for the disc-shaped aperture, a.k.a. pupil function.
-
-
-    Notes
-    -----
-    The pupil fuction is defined as
-
-    .. math::
-
-        A_\\Sigma(\\xi) = \\begin{cases}1,& \\Big\\|\\frac{f}{k}\\xi\\Big\\|
-        \\leq r\\\\ 0,& \\Big\\|\\frac{f}{k}\\xi\\Big\\| > r \\end{cases}
-
-    where :math:`\kappa` is the wave number of the incoming electron wave,
-    :math:`r` is the radius of the aperture and :math:`f` is the focal length
-    of the principal lens.
-    """
-    aper_rad = kwargs.pop('aper_rad')
-    focal_length = kwargs.pop('focal_length')
-    wave_number = kwargs.pop('wave_number')
-    scaled_rad = aper_rad * wave_number / focal_length
-
-    norm_sq = np.sum(xi ** 2 for xi in x[1:])
-
-    return norm_sq <= scaled_rad ** 2
-
-
-def optics_imperfections(x, **kwargs):
-    """Function encoding the phase shifts due to optics imperfections.
-
-
-    Notes
-    -----
-    The optics-imperfections function is defined as
-
-    .. math::
-
-        O(\\xi) = e^{iW(||\\xi\\|^2)},
-
-    where the function :math:`W` is defined as
-
-    .. math::
-
-        W(t) = -\\frac{1}{4k}t\\left(\\frac{C_s}{k^2}t-2\\Delta z\\right),
-
-    and where :math:`\kappa` is the wave number of the incoming electron wave,
-    :math:`C_s` is the third-order spherical abberation of the lens and
-    :math:`\\Delta z` is the defocus."""
-    wave_number = kwargs.pop('wave_number')
-    spherical_abe = kwargs.pop('spherical_abe')
-    defocus = kwargs.pop('defocus')
-
-    norm_sq = np.sum(xi ** 2 for xi in x[1:])
-    result = - (1 / (4 * wave_number)) * norm_sq * (norm_sq * spherical_abe /
-                                                    wave_number ** 2 - 2 *
-                                                    defocus)
-    result = np.exp(1j * result)
-
-    return result
-
-
-def modulation_transfer_function(x, **kwargs):
-    """Function that characterizes the detector response.
-
-
-    Notes
-    -----
-    The modulation transfer function is defined as
-
-    .. math::
-
-        MTF(\\xi) = \\frac{a}{1 + \\alpha\\|\\xi\\|^2} +
-        \\frac{b}{1+\\beta\\|\\xi\\|^2}+c
-
-    where :math:`a,b,c,\\alpha` and :math:`\\beta` are real parameters."""
-    a = kwargs.pop('mtf_a')
-    b = kwargs.pop('mtf_b')
-    c = kwargs.pop('mtf_c')
-    alpha = kwargs.pop('mtf_alpha')
-    beta = kwargs.pop('mtf_beta')
-
-    norm_sq = np.sum(xi ** 2 for xi in x[1:]) / M**2
-
-    result = a / (1 + alpha * norm_sq) + b / (1 + beta * norm_sq) + c
-
-    return result
-
-
-# %%
 dir_path = os.path.abspath('/home/zickert/TEM_reco_project/One_particle_new_simulation')
 file_path_phantom = os.path.join(dir_path, 'rna_phantom.mrc')
 file_path_phantom_abs = os.path.join(dir_path, 'rna_phantom_abs.mrc')
@@ -115,7 +34,7 @@ with FileReaderMRC(file_path_phantom) as phantom_reader:
 with FileReaderMRC(file_path_phantom_abs) as phantom_abs_reader:
     phantom_abs_header, phantom_abs_asarray = phantom_abs_reader.read()
 with FileReaderMRC(file_path_tiltseries) as tiltseries_reader:
-    tiltseries_header, data_asarry = tiltseries_reader.read()
+    tiltseries_header, data_asarray = tiltseries_reader.read()
 with FileReaderMRC(file_path_tiltseries_nonoise) as tiltseries_nonoise_reader:
     tiltseries_nonoise_header, data_nonoise_asarray = tiltseries_nonoise_reader.read()
 
@@ -130,11 +49,20 @@ wave_number = 2 * np.pi / wave_length
 
 sigma = e_mass * e_charge / (wave_number * planck_bar ** 2)
 
+abs_phase_ratio = 0.5
+obj_magnitude = 0.5*sigma
+noise_lvl = 1e-5
+regpar = 1e-1
+num_angles = 61
+num_angles_per_kaczmarz_block = 1
+num_cycles = 3
+
+
 total_dose = 5000 * 1e18  # total electron dose per m^2
 dose_per_img = total_dose / 61
 gain = 80  # average nr of digital counts per incident electron
 
-# Define sample diameter and height (we take the height at the edge)
+# Define sample diameter and height. We take flat sample
 sample_diam = 1200e-9  # m
 sample_height = 150e-9  # m
 
@@ -146,10 +74,11 @@ focal_length = 2.7e-3  # m
 spherical_abe = 2.1e-3  # m
 defocus = 3e-6  # m
 
-# Define constants defining the modulation transfer function
-mtf_a = 0.7
-mtf_b = 0.2
-mtf_c = 0.1
+# Define constants defining the modulation transfer function (a,b,c) = (0,0,1)
+# corresponds to det_op = identity_op
+mtf_a = 0
+mtf_b = 0
+mtf_c = 1
 mtf_alpha = 10
 mtf_beta = 40
 
@@ -157,55 +86,131 @@ mtf_beta = 40
 det_size = 16e-6  # m
 det_area = det_size ** 2  # m^2
 
-reco_space = odl.uniform_discr(min_pt=[-95e-9/2, -100e-9/2,
-                                       -80e-9/2],
-                               max_pt=[95e-9/2, 100e-9/2,
-                                       80e-9/2],
-                               shape=[95, 100, 80], dtype='complex128')
+reco_space = odl.uniform_discr(min_pt=[-95e-9/4, -100e-9/4,
+                                       -80e-9/4],
+                               max_pt=[95e-9/4, 100e-9/4,
+                                       80e-9/4],
+                               shape=[95, 100, 80],dtype='float64')
 
-angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, 61)
+angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, num_angles)
 detector_partition = odl.uniform_partition([-det_size/M * 200/2] * 2,
                                            [det_size/M * 200/2] * 2, [200] * 2)
 
 # The x-axis is the tilt-axis.
 # Check that the geometry matches the one from TEM-simulator!
 # In particular, check that det_pos_init and det_axes_init are correct.
-geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition,
-                                           axis=(1, 0, 0),
-                                           det_pos_init=(0, 0, -1),
-                                           det_axes_init=((1, 0, 0), (0, 1, 0)))
-ray_trafo = odl.tomo.RayTransform(reco_space, geometry)
-scattering_op = ray_trafo.range.one() + 1j*sigma * ray_trafo
+geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition)#,
+                             #              axis=(1, 0, 0),
+                             #              det_pos_init=(0, 0, -1),
+                             #              det_axes_init=((1, 0, 0), (0, 1, 0)))
+ray_trafo = BlockRayTransform(reco_space, geometry)
 
-ft_ctf = odl.trafos.FourierTransform(scattering_op.range, axes=[1, 2])
-pupil = ft_ctf.range.element(pupil_function, aper_rad=aper_rad,
-                             wave_number=wave_number,
-                             focal_length=focal_length)
+imageFormation_op = make_imageFormationOp(ray_trafo.range, 
+                                          wave_number, spherical_abe, defocus,
+                                          det_size, M, rescale_ctf=False,
+                                          obj_magnitude=obj_magnitude, abs_phase_ratio = abs_phase_ratio,
+                                          dose_per_img=dose_per_img, gain=gain,
+                                          det_area=det_area)
 
-optics_imperf = ft_ctf.range.element(optics_imperfections,
-                                     wave_number=wave_number,
-                                     spherical_abe=spherical_abe,
-                                     defocus=defocus)
-ctf = 2 * np.pi * pupil * optics_imperf
-optics_op_cst = 1/(M*(2*np.pi)**2)
-optics_op = optics_op_cst * ft_ctf.inverse * ctf * ft_ctf
+mask = reco_space.element(spherical_mask, radius=23.75e-9)
 
-intens_op = IntensityOperator(optics_op.range)
+# Leave out detector operator for simplicity
+forward_op = imageFormation_op * ray_trafo 
 
-# Check behaviour of the MTF
-ft_det = odl.trafos.FourierTransform(intens_op.range, axes=[1, 2])
-mtf = ft_det.range.element(modulation_transfer_function, mtf_a=mtf_a,
-                           mtf_b=mtf_b, mtf_c=mtf_c, mtf_alpha=mtf_alpha,
-                           mtf_beta=mtf_beta)
-det_op = det_area * dose_per_img * gain * ft_det.inverse * mtf * ft_det
+phantom = reco_space.element(phantom_asarray)
 
-forward_op = det_op * intens_op * optics_op * scattering_op
+phantom_abs = reco_space.element(phantom_abs_asarray)
 
 
-phantom = reco_space.element(phantom_asarray + 1j * phantom_abs_asarray)
+# remove background
+bg_cst = np.min(phantom)
+
+phantom -= bg_cst
+
+
+
 data = forward_op(phantom)
+
+true_data = forward_op.range.element(np.transpose(data_nonoise_asarray, (2,0,1)))
+
 
 reco = ray_trafo.domain.zero()
 
-lin_at_one = forward_op.derivative(forward_op.domain.one())
-backprop = lin_at_one.adjoint(data)
+phantom.show(coords = [0,None,None])
+phantom_abs.show(coords = [0,None,None])
+data.show(coords = [0,[-2e-8,2e-8],[-2e-8,2e-8]])
+
+#plt.imshow(true_data, cmap='gray')
+#plt.colorbar()
+true_data.show(coords = [0, [-2e-8, 2e-8], [-2e-8, 2e-8]])
+
+#background = bg_cst * ray_trafo.domain.one()
+#
+#bg_abs_cst = np.min(phantom_abs)
+#bg_ratio = bg_abs_cst/bg_cst
+#
+#imageFormation_op_bg = make_imageFormationOp(ray_trafo.range, 
+#                                          wave_number, spherical_abe, defocus,
+#                                          det_size, M, rescale_ctf=False,
+#                                          obj_magnitude=obj_magnitude,abs_phase_ratio=bg_ratio,
+#                                          dose_per_img=dose_per_img, gain=gain,
+#                                          det_area=det_area)
+#
+#forward_op_bg = imageFormation_op_bg * ray_trafo 
+#
+#data_bg = forward_op_bg(background)
+#data_bg.show(coords=[0,None,None])
+
+true_data_bc = buffer_correction(true_data)
+data_bc = buffer_correction(data)
+
+data_bc.show(coords = [0,[-2e-8,2e-8],[-2e-8,2e-8]])
+true_data_bc.show(coords = [0, [-2e-8, 2e-8], [-2e-8, 2e-8]])
+
+
+
+data_renormalized = true_data_bc * (np.mean(data.asarray()))
+
+
+
+# TRY RECONSTRUCTION
+callback = (odl.solvers.CallbackPrintIteration() &
+            odl.solvers.CallbackShow())
+
+
+kaczmarz_plan = make_kaczmarz_plan(num_angles, num_blocks_per_superblock=num_angles_per_kaczmarz_block,
+                                   method='random')
+
+ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
+
+F_post = make_imageFormationOp(ray_trafo_block.range, 
+                                          wave_number, spherical_abe, defocus,
+                                          det_size, M, rescale_ctf=False,
+                                          obj_magnitude=obj_magnitude, abs_phase_ratio = abs_phase_ratio,
+                                          dose_per_img=dose_per_img, gain=gain,
+                                          det_area=det_area)
+
+F_pre = odl.MultiplyOperator(mask, reco_space, reco_space)
+
+get_op = make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre, Op_post=F_post)
+get_data = make_data_blocks(data_renormalized, kaczmarz_plan)
+
+# Optional nonnegativity-constraint
+nonneg_constraint = odl.solvers.IndicatorNonnegativity(reco_space).proximal(1)
+
+
+def nonneg_projection(x):
+    x[:] = nonneg_constraint(x)
+
+
+# %%
+
+reco = reco_space.zero()
+get_proj_op = make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre, Op_post=None)
+
+kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
+                     1e-1 * regpar*obj_magnitude ** 2, imageFormationOp = F_post, gamma_H1 = 0.9, niter_CG = 30,
+                     callback=callback, num_cycles=num_cycles) # , projection=nonneg_projection
+
+
+

@@ -17,7 +17,7 @@ def make_kaczmarz_plan(num_blocks, method='sequential',
     indices = list(range(num_blocks))
     num_super_blocks = (num_blocks + (num_blocks_per_superblock-1)) // num_blocks_per_superblock
     if num_blocks % num_blocks_per_superblock != 0:
-        indices.extend(indices[ : num_blocks_per_superblock - (num_blocks % num_blocks_per_superblock)])
+        indices.extend(indices[: num_blocks_per_superblock - (num_blocks % num_blocks_per_superblock)])
 
     block_indices = [indices[j*num_blocks_per_superblock: (j+1)*num_blocks_per_superblock]
                      for j in range(num_super_blocks)]
@@ -31,7 +31,7 @@ def make_kaczmarz_plan(num_blocks, method='sequential',
     return block_indices
 
 
-def make_Op_blocks(block_indices, Block_Op, Op_pre = None, Op_post = None):
+def make_Op_blocks(block_indices, Block_Op, Op_pre=None, Op_post=None):
 
     if Op_pre is not None:
         if Op_post is not None:
@@ -51,16 +51,13 @@ def make_Op_blocks(block_indices, Block_Op, Op_pre = None, Op_post = None):
             def get_Op(idx):
                 sub_op = Block_Op.get_sub_operator(block_indices[idx])
                 return sub_op
-                
+
     return get_Op
 
-    
-def make_data_blocks(data, block_indices, block_axis = 0):
-    
+
+def make_data_blocks(data, block_indices, block_axis=0):
+
     def get_data_block(idx):
         return data.asarray()[block_indices[idx]]
-    
+
     return get_data_block
-    
-
-
