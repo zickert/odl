@@ -4,7 +4,6 @@
 from __future__ import print_function, division, absolute_import
 from future import standard_library
 standard_library.install_aliases()
-from builtins import super
 
 import numpy as np
 import pytest
@@ -15,9 +14,6 @@ from odl.contrib.electron_tomo.kaczmarz_alg import *
 from odl.contrib.electron_tomo.image_formation_etomo import *
 from odl.contrib.electron_tomo.kaczmarz_util import *
 from odl.contrib.electron_tomo.support_constraint import spherical_mask
-
-
-
 
 
 obj_magnitude = 1e-2
@@ -44,15 +40,12 @@ angle_partition = odl.uniform_partition(0, np.pi, num_angles)
 detector_partition = odl.uniform_partition(-30, 30, 512)
 
 geometry = odl.tomo.Parallel2dGeometry(angle_partition, detector_partition)
-ray_trafo = BlockRayTransform(reco_space, geometry)#odl.tomo.RayTransform(reco_space.complex_space, geometry)
+ray_trafo = BlockRayTransform(reco_space, geometry)  # odl.tomo.RayTransform(reco_space.complex_space, geometry)
 
-
-
-# Choose constant before ray_trafo so that the result is small enough for a
-# linearisation of the exponential to make sense.
 imageFormation_op = make_imageFormationOp(ray_trafo.range, 
-                                          wave_number, spherical_abe, defocus, det_size, M,
-                                          obj_magnitude = obj_magnitude)
+                                          wave_number, spherical_abe, defocus,
+                                          det_size, M,
+                                          obj_magnitude=obj_magnitude)
 
 mask = reco_space.element(spherical_mask, radius=19)
 
@@ -80,8 +73,8 @@ ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 
 
 F_post = make_imageFormationOp(ray_trafo_block.range, 
-                               wave_number, spherical_abe, defocus, det_size, M,
-                               obj_magnitude = obj_magnitude)
+                               wave_number, spherical_abe, defocus, det_size,
+                               M, obj_magnitude=obj_magnitude)
 F_pre = odl.MultiplyOperator(mask,reco_space,reco_space)
 
 get_op = make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre, Op_post=F_post)
@@ -90,9 +83,12 @@ get_data = make_data_blocks(data, kaczmarz_plan)
 
 # Optional nonnegativity-constraint
 nonneg_constraint = odl.solvers.IndicatorNonnegativity(reco_space).proximal(1)
+
+
 def nonneg_projection(x):
     x[:] = nonneg_constraint(x)
-    
+
+
 # %%
     
 reco = reco_space.zero()
