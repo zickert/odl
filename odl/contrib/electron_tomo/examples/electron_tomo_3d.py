@@ -6,6 +6,7 @@ from future import standard_library
 standard_library.install_aliases()
 
 import numpy as np
+import matplotlib.pyplot as plt
 import odl
 from timeit import timeit
 from odl.contrib.electron_tomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
@@ -25,7 +26,7 @@ def circular_mask(x, **kwargs):
 
 obj_magnitude = 1e-2
 noise_lvl = 1e-2
-regpar = 1e-1
+regpar = 1
 num_angles = 120
 num_angles_per_kaczmarz_block = 1
 num_cycles = 3
@@ -46,9 +47,12 @@ defocus = 3e-6  # m
 # Set size of detector pixels (before rescaling to account for magnification)
 det_size = 16e-6  # m
 
+ctf_scaling_factor = (30 / (det_size / M * 100))
+
+
 reco_space = odl.uniform_discr(min_pt=[-20] * 3,
                                max_pt=[20] * 3,
-                               shape=[300] * 3,)
+                               shape=[300] * 3)
 
 angle_partition = odl.uniform_partition(0, np.pi, num_angles)
 detector_partition = odl.uniform_partition([-30] * 2, [30] * 2, [200] * 2)
@@ -61,7 +65,7 @@ ray_trafo = BlockRayTransform(reco_space, geometry)
 
 imageFormation_op = make_imageFormationOp(ray_trafo.range, 
                                           wave_number, spherical_abe, defocus,
-                                          det_size, M,
+                                          det_size, M, rescale_ctf_factor = ctf_scaling_factor,
                                           obj_magnitude=obj_magnitude)
 
 mask = reco_space.element(spherical_mask, radius=19)
@@ -93,7 +97,7 @@ ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 
 F_post = make_imageFormationOp(ray_trafo_block.range,
                                wave_number, spherical_abe, defocus, det_size,
-                               M, obj_magnitude=obj_magnitude)
+                               M, rescale_ctf_factor = ctf_scaling_factor, obj_magnitude=obj_magnitude)
 
 F_pre = odl.MultiplyOperator(mask, reco_space, reco_space)
 
@@ -109,11 +113,11 @@ def nonneg_projection(x):
 
 
 # %%
-reco = reco_space.zero()
-kaczmarz_reco_method(get_op, reco, get_data, len(kaczmarz_plan),
-                     regpar * obj_magnitude ** 2, callback=callback,
-                     num_cycles=num_cycles, niter_CG=10,
-                     projection=nonneg_projection)
+#reco = reco_space.zero()
+#kaczmarz_reco_method(get_op, reco, get_data, len(kaczmarz_plan),
+#                     regpar * obj_magnitude ** 2, callback=callback,
+#                     num_cycles=num_cycles, niter_CG=10,
+#                     projection=nonneg_projection)
 
 # %%
 

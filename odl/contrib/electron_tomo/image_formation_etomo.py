@@ -96,13 +96,12 @@ def optics_imperfections(xi, **kwargs):
     det_size = kwargs.pop('det_size')
     magnification = kwargs.pop('magnification')
     axes = kwargs.pop('axes')
-    rescale_ctf = kwargs.pop('rescale_ctf')
+    rescale_ctf_factor = kwargs.pop('rescale_ctf_factor')
 
     norm_sq = np.sum(xi[dim] ** 2 for dim in axes)
-    if rescale_ctf:
-        # Rescale to account for larger detector in toy examples
-        rescale_factor = (30 / (det_size / magnification * 100)) ** 2
-        norm_sq *= rescale_factor
+    # Rescale to account for larger detector in toy examples
+    # rescale_factor = (30 / (det_size / magnification * 100)) ** 2
+    norm_sq *= rescale_ctf_factor ** 2
     result = - (1 / (4 * wave_number)) * norm_sq * (norm_sq * spherical_abe /
                                                     wave_number ** 2 - 2 *
                                                     defocus)
@@ -111,9 +110,10 @@ def optics_imperfections(xi, **kwargs):
     return result
 
 
+
 def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
                           det_size, magnification, abs_phase_ratio=1,
-                          obj_magnitude=1,rescale_ctf=True,
+                          obj_magnitude=1, rescale_ctf_factor=1,
                           dose_per_img=1, gain=1, det_area=1, **kwargs):
 
     ratio_op = ConstantPhaseAbsRatio(domain, abs_phase_ratio=abs_phase_ratio,
@@ -142,7 +142,7 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
                                          det_size=det_size,
                                          magnification=magnification,
                                          axes=ft_axes,
-                                         rescale_ctf=rescale_ctf)
+                                         rescale_ctf_factor=rescale_ctf_factor)
 
     # Leave out pupil-function since it has no effect
     ctf = optics_imperf
@@ -150,7 +150,7 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
     optics_op = ft_ctf.inverse * ctf * ft_ctf
     intens_op = IntensityOperator(optics_op.range)
     
-    optics_op_cst = 1/(magnification*(2*np.pi)**2)
+    optics_op_cst = 2*np.pi /(magnification*(2*np.pi)**2)
     det_op_cst = det_area * dose_per_img * gain
     total_cst = optics_op_cst ** 2 * det_op_cst
     
