@@ -70,19 +70,31 @@ def kaczmarz_SART_method(get_ProjOp, reco, get_data, num_iterates_per_cycle,
             unit_proj = ray_trafo(ray_trafo.domain.one())
             unit_proj_sqrt = np.sqrt(unit_proj)
 
-            if imageFormationOp is not None:
+            if imageFormationOp is not None or gamma_H1 > 0:
 
                 # Assemble operators for optimization in projection-space
                 A = imageFormOp.derivative(p_reco)
                 if gamma_H1 > 0:
+                    # Regularize the unit-projection for numerical stability
                     unit_proj_np = unit_proj.asarray()
-                    unit_proj_np[unit_proj_np < 1e-2] = 1.0
-                    #grad = odl.Gradient(p_reco.space)
-                    grad = odl.PartialDerivative(p_reco.space, 1)
-                    if p_reco.space.ndim > 1:
-                        grad = odl.BroadcastOperator(grad, odl.PartialDerivative(p_reco.space, 2))
-                    grad_log_unit_proj = grad * (0.5 * np.log(unit_proj))
-                    grad_proj = grad - grad_log_unit_proj
+                    unit_proj_max = np.max(unit_proj_np)
+                    unit_proj_supp = (unit_proj_np >= 1e-2*unit_proj_max)
+                    unit_proj_np[unit_proj_np < 1e-6*unit_proj_max] = 1e-6*unit_proj_max
+                    
+                    # Define derivative such that it only acts within the support
+                    unit_proj_supp_dd1 = p_reco.space.element(unit_proj_supp * np.roll(unit_proj_supp, -1, axis=1))
+                    dd1 = unit_proj_supp_dd1 * odl.PartialDerivative(p_reco.space, 1)
+                    
+                    dd1_log_unit_proj = dd1(0.5 * np.log(unit_proj))
+                    dd1_proj = dd1 - odl.MultiplyOperator(dd1_log_unit_proj, domain=dd1.domain, range=dd1.range)
+                    if p_reco.space.ndim > 2:
+                        unit_proj_supp_dd2 = p_reco.space.element(unit_proj_supp * np.roll(unit_proj_supp, -1, axis=2))
+                        dd2 = unit_proj_supp_dd2 * odl.PartialDerivative(p_reco.space, 2)
+                        dd2_log_unit_proj = dd2(0.5 * np.log(unit_proj))
+                        dd2_proj = dd2 - odl.MultiplyOperator(dd2_log_unit_proj, domain=dd2.domain, range=dd2.range)
+                        grad_proj = odl.BroadcastOperator(dd1_proj, dd2_proj)
+                    else:
+                        grad_proj = dd1_proj 
                     T = (unit_proj_sqrt * (A.adjoint * (A * unit_proj_sqrt))) + (regpar*(1.0-gamma_H1)) * odl.IdentityOperator(p_reco.space) + (regpar*gamma_H1) * (grad_proj.adjoint * grad_proj)
                 else:
                     T = (unit_proj_sqrt * (A.adjoint * (A * unit_proj_sqrt))) + regpar * odl.IdentityOperator(p_reco.space)
@@ -93,10 +105,10 @@ def kaczmarz_SART_method(get_ProjOp, reco, get_data, num_iterates_per_cycle,
                 d_p_tilde = T.domain.zero()
                 odl.solvers.conjugate_gradient(T, d_p_tilde, b, niter=niter_CG)
 
-                # Apply inverse preconditioner
+                # Apply inverse preconditioner (regularized for numerical stability)
                 unit_proj_sqrt_np = unit_proj_sqrt.asarray()
-                unit_proj_sqrt_np[unit_proj_sqrt_np < 1e-5] = 1.0
-                #unit_proj_sqrt = unit_proj_sqrt.space.element(unit_proj_aa)
+                unit_proj_sqrt_max = np.max(unit_proj_sqrt_np)
+                unit_proj_sqrt_np[unit_proj_sqrt_np < 1e-2*unit_proj_sqrt_max] = 1e-2*unit_proj_sqrt_max
                 d_p_tilde /= unit_proj_sqrt
 
             else:
