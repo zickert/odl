@@ -9,23 +9,24 @@ import numpy as np
 
 import os
 import odl
-from odl.contrib.electron_tomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
 from odl.contrib.electron_tomo.block_ray_trafo import BlockRayTransform
 from odl.contrib.electron_tomo.kaczmarz_alg import *
 from odl.contrib.electron_tomo.image_formation_etomo import *
 from odl.contrib.electron_tomo.kaczmarz_util import *
 from odl.contrib.electron_tomo.support_constraint import spherical_mask
 from odl.contrib.electron_tomo.buffer_correction import buffer_correction
+from odl.contrib.electron_tomo.plot_3d import plot_3d_ortho_slices
 
 
 import matplotlib.pyplot as plt 
 
-from odl.contrib.mrc import (
-    FileReaderMRC, FileWriterMRC, mrc_header_from_params)
+from odl.contrib.mrc import FileReaderMRC
 
 dir_path = os.path.abspath('/home/zickert/TEM_reco_project/One_particle_new_simulation')
 file_path_phantom = os.path.join(dir_path, 'rna_phantom.mrc')
 file_path_phantom_abs = os.path.join(dir_path, 'rna_phantom_abs.mrc')
+file_path_map = os.path.join(dir_path, '1I3Q_map.mrc')
+file_path_map_abs = os.path.join(dir_path, '1I3Q_abs_map.mrc')
 file_path_tiltseries = os.path.join(dir_path, 'tiltseries.mrc')
 file_path_tiltseries_nonoise = os.path.join(dir_path, 'tiltseries_nonoise.mrc')
 
@@ -33,11 +34,17 @@ with FileReaderMRC(file_path_phantom) as phantom_reader:
     phantom_header, phantom_asarray = phantom_reader.read()
 with FileReaderMRC(file_path_phantom_abs) as phantom_abs_reader:
     phantom_abs_header, phantom_abs_asarray = phantom_abs_reader.read()
+with FileReaderMRC(file_path_map) as map_reader:
+    map_header, map_asarray = map_reader.read()
+with FileReaderMRC(file_path_map_abs) as map_abs_reader:
+    map_abs_header, map_abs_asarray = map_abs_reader.read()
 with FileReaderMRC(file_path_tiltseries) as tiltseries_reader:
     tiltseries_header, data_asarray = tiltseries_reader.read()
 with FileReaderMRC(file_path_tiltseries_nonoise) as tiltseries_nonoise_reader:
     tiltseries_nonoise_header, data_nonoise_asarray = tiltseries_nonoise_reader.read()
 
+
+rescale_factor = 1e9
 
 #  Define some physical constants
 e_mass = 9.11e-31  # kg
@@ -50,9 +57,8 @@ wave_number = 2 * np.pi / wave_length
 sigma = e_mass * e_charge / (wave_number * planck_bar ** 2)
 
 abs_phase_ratio = 0.5
-obj_magnitude = 0.5*sigma
-noise_lvl = 1e-5
-regpar = 1e-1
+obj_magnitude = 0.5*sigma / rescale_factor
+regpar = 2e3
 num_angles = 61
 num_angles_per_kaczmarz_block = 1
 num_cycles = 3
@@ -74,7 +80,7 @@ focal_length = 2.7e-3  # m
 spherical_abe = 2.1e-3  # m
 defocus = 3e-6  # m
 
-# Define constants defining the modulation transfer function (a,b,c) = (0,0,1)
+# Define constants defining the modulation transfer function. (a,b,c) = (0,0,1)
 # corresponds to det_op = identity_op
 mtf_a = 0
 mtf_b = 0
@@ -86,36 +92,37 @@ mtf_beta = 40
 det_size = 16e-6  # m
 det_area = det_size ** 2  # m^2
 
-reco_space = odl.uniform_discr(min_pt=[-95e-9/4, -100e-9/4,
-                                       -80e-9/4],
-                               max_pt=[95e-9/4, 100e-9/4,
-                                       80e-9/4],
+reco_space = odl.uniform_discr(min_pt=[-rescale_factor*95e-9/4, -rescale_factor*100e-9/4,
+                                       -rescale_factor*80e-9/4],
+                               max_pt=[rescale_factor*95e-9/4, rescale_factor*100e-9/4,
+                                       rescale_factor*80e-9/4],
                                shape=[95, 100, 80],dtype='float64')
 
 angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, num_angles)
-detector_partition = odl.uniform_partition([-det_size/M * 200/2] * 2,
-                                           [det_size/M * 200/2] * 2, [200] * 2)
+detector_partition = odl.uniform_partition([-rescale_factor*det_size/M * 200/2] * 2,
+                                           [rescale_factor*det_size/M * 200/2] * 2, [200] * 2)
 
 # The x-axis is the tilt-axis.
 # Check that the geometry matches the one from TEM-simulator!
 # In particular, check that det_pos_init and det_axes_init are correct.
-geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition)#,
-                             #              axis=(1, 0, 0),
-                             #              det_pos_init=(0, 0, -1),
-                             #              det_axes_init=((1, 0, 0), (0, 1, 0)))
+geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition,
+                                           axis=(1, 0, 0),
+                                           det_pos_init=(0, 0, -1),
+                                           det_axes_init=((1, 0, 0), (0, 1, 0)))
 ray_trafo = BlockRayTransform(reco_space, geometry)
 
 imageFormation_op = make_imageFormationOp(ray_trafo.range, 
                                           wave_number, spherical_abe, defocus,
-                                          det_size, M, rescale_ctf=False,
-                                          obj_magnitude=obj_magnitude, abs_phase_ratio = abs_phase_ratio,
+                                          det_size, M, rescale_ctf=True, rescale_ctf_factor=rescale_factor,
+                                          obj_magnitude=obj_magnitude,
+                                          abs_phase_ratio=abs_phase_ratio,
                                           dose_per_img=dose_per_img, gain=gain,
                                           det_area=det_area)
 
-mask = reco_space.element(spherical_mask, radius=23.75e-9)
+mask = reco_space.element(spherical_mask, radius=rescale_factor * 10.0e-9)
 
 # Leave out detector operator for simplicity
-forward_op = imageFormation_op * ray_trafo 
+forward_op = imageFormation_op * ray_trafo
 
 phantom = reco_space.element(phantom_asarray)
 
@@ -128,21 +135,21 @@ bg_cst = np.min(phantom)
 phantom -= bg_cst
 
 
-
 data = forward_op(phantom)
 
-true_data = forward_op.range.element(np.transpose(data_nonoise_asarray, (2,0,1)))
+true_data = forward_op.range.element(np.transpose(data_asarray,
+                                                  (2, 0, 1)))
 
 
 reco = ray_trafo.domain.zero()
 
-phantom.show(coords = [0,None,None])
-phantom_abs.show(coords = [0,None,None])
-data.show(coords = [0,[-2e-8,2e-8],[-2e-8,2e-8]])
+phantom.show(coords=[0, None, None])
+phantom_abs.show(coords=[0, None, None])
+data.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
 
 #plt.imshow(true_data, cmap='gray')
 #plt.colorbar()
-true_data.show(coords = [0, [-2e-8, 2e-8], [-2e-8, 2e-8]])
+true_data.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
 
 #background = bg_cst * ray_trafo.domain.one()
 #
@@ -164,8 +171,8 @@ true_data.show(coords = [0, [-2e-8, 2e-8], [-2e-8, 2e-8]])
 true_data_bc = buffer_correction(true_data)
 data_bc = buffer_correction(data)
 
-data_bc.show(coords = [0,[-2e-8,2e-8],[-2e-8,2e-8]])
-true_data_bc.show(coords = [0, [-2e-8, 2e-8], [-2e-8, 2e-8]])
+data_bc.show(coords = [0,[-2e1,2e1],[-2e1,2e1]])
+true_data_bc.show(coords = [0, [-2e1, 2e1], [-2e1, 2e1]])
 
 
 
@@ -173,22 +180,24 @@ data_renormalized = true_data_bc * (np.mean(data.asarray()))
 
 
 
-# TRY RECONSTRUCTION
+# %% TRY RECONSTRUCTION
+
 callback = (odl.solvers.CallbackPrintIteration() &
             odl.solvers.CallbackShow())
 
 
-kaczmarz_plan = make_kaczmarz_plan(num_angles, num_blocks_per_superblock=num_angles_per_kaczmarz_block,
+kaczmarz_plan = make_kaczmarz_plan(num_angles,
+                                   num_blocks_per_superblock=num_angles_per_kaczmarz_block,
                                    method='random')
 
 ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 
-F_post = make_imageFormationOp(ray_trafo_block.range, 
-                                          wave_number, spherical_abe, defocus,
-                                          det_size, M, rescale_ctf=False,
-                                          obj_magnitude=obj_magnitude, abs_phase_ratio = abs_phase_ratio,
-                                          dose_per_img=dose_per_img, gain=gain,
-                                          det_area=det_area)
+F_post = make_imageFormationOp(ray_trafo_block.range, wave_number,
+                               spherical_abe, defocus, det_size, M,
+                               rescale_ctf=True, rescale_ctf_factor=rescale_factor,obj_magnitude=obj_magnitude,
+                               abs_phase_ratio=abs_phase_ratio,
+                               dose_per_img=dose_per_img, gain=gain,
+                               det_area=det_area)
 
 F_pre = odl.MultiplyOperator(mask, reco_space, reco_space)
 
@@ -202,15 +211,29 @@ nonneg_constraint = odl.solvers.IndicatorNonnegativity(reco_space).proximal(1)
 def nonneg_projection(x):
     x[:] = nonneg_constraint(x)
 
+reco = reco_space.zero()
+get_proj_op = make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
+                             Op_post=None)
+
+kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
+                     regpar*obj_magnitude ** 2,
+                     imageFormationOp=F_post, gamma_H1=0.9, niter_CG=30,
+                     callback=callback, num_cycles=num_cycles, projection=nonneg_projection)
+
+
+# Plot results
+plot_3d_ortho_slices(phantom)
+plot_3d_ortho_slices(reco)
+
 
 # %%
 
-reco = reco_space.zero()
-get_proj_op = make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre, Op_post=None)
 
-kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
-                     1e-1 * regpar*obj_magnitude ** 2, imageFormationOp = F_post, gamma_H1 = 0.9, niter_CG = 30,
-                     callback=callback, num_cycles=num_cycles) # , projection=nonneg_projection
-
-
-
+#map_slice = map_asarray[:,:,79]
+#map_abs_slice = map_abs_asarray[:,:,79]
+#                                
+#plt.imshow(map_slice)
+#plt.colorbar()
+#plt.figure()
+#plt.imshow(map_abs_slice)
+#plt.colorbar()                               

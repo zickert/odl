@@ -5,7 +5,9 @@ from __future__ import print_function, division, absolute_import
 from future import standard_library
 standard_library.install_aliases()
 
+
 import numpy as np
+import matplotlib.pyplot as plt
 import pytest
 import odl
 from odl.contrib.electron_tomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
@@ -19,7 +21,7 @@ from odl.contrib.electron_tomo.support_constraint import spherical_mask
 obj_magnitude = 1e-2
 
 noise_lvl = 1e-2
-regpar = 1e-1
+regpar = 1e1
 num_angles = 360
 num_angles_per_kaczmarz_block = 1
 num_cycles = 1
@@ -33,6 +35,8 @@ focal_length = 2.7e-3  # m
 spherical_abe = 2.1e-3  # m
 defocus = 3e-6  # m
 
+ctf_scaling_factor = (30 / (det_size / M * 100))
+
 reco_space = odl.uniform_discr(
     min_pt=[-20, -20], max_pt=[20, 20], shape=[300, 300])
 
@@ -44,7 +48,7 @@ ray_trafo = BlockRayTransform(reco_space, geometry)  # odl.tomo.RayTransform(rec
 
 imageFormation_op = make_imageFormationOp(ray_trafo.range, 
                                           wave_number, spherical_abe, defocus,
-                                          det_size, M,
+                                          det_size, M, rescale_ctf_factor = ctf_scaling_factor,
                                           obj_magnitude=obj_magnitude)
 
 mask = reco_space.element(spherical_mask, radius=19)
@@ -74,7 +78,7 @@ ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 
 F_post = make_imageFormationOp(ray_trafo_block.range, 
                                wave_number, spherical_abe, defocus, det_size,
-                               M, obj_magnitude=obj_magnitude)
+                               M, obj_magnitude=obj_magnitude, rescale_ctf_factor = ctf_scaling_factor)
 F_pre = odl.MultiplyOperator(mask,reco_space,reco_space)
 
 get_op = make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre, Op_post=F_post)
@@ -90,12 +94,12 @@ def nonneg_projection(x):
 
 
 # %%
-    
-reco = reco_space.zero()
-kaczmarz_reco_method(get_op, reco, get_data, len(kaczmarz_plan),
-                     regpar*obj_magnitude ** 2, callback=callback,
-                     num_cycles=num_cycles, projection=nonneg_projection)
-
+#    
+#reco = reco_space.zero()
+#kaczmarz_reco_method(get_op, reco, get_data, len(kaczmarz_plan),
+#                     regpar*obj_magnitude ** 2, callback=callback,
+#                     num_cycles=num_cycles, projection=nonneg_projection)
+#
 
 # %%
 
@@ -119,18 +123,18 @@ kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
 #odl.solvers.landweber(forward_op, reco, data, 1000, omega=3e1, callback=callback)
 
 
-if __name__ == '__main__':
-    odl.util.test_file(__file__)
-
-
-    x_adj = reco_space.one() + odl.phantom.white_noise(reco_space)
-    y_adj = forward_op_linearized.range.one() + odl.phantom.white_noise(forward_op_linearized.range)
-
-    Ax_adj = forward_op_linearized(x_adj)
-    ATy_adj = forward_op_linearized.adjoint(y_adj)
-
-    ip1 = x_adj.inner(ATy_adj)
-    ip2 = Ax_adj.inner(y_adj)
-
-    assert pytest.approx(ip1.real,rel=5e-2) == ip2.real
+#if __name__ == '__main__':
+#    odl.util.test_file(__file__)
+#
+#
+#    x_adj = reco_space.one() + odl.phantom.white_noise(reco_space)
+#    y_adj = forward_op_linearized.range.one() + odl.phantom.white_noise(forward_op_linearized.range)
+#
+#    Ax_adj = forward_op_linearized(x_adj)
+#    ATy_adj = forward_op_linearized.adjoint(y_adj)
+#
+#    ip1 = x_adj.inner(ATy_adj)
+#    ip2 = Ax_adj.inner(y_adj)
+#
+#    assert pytest.approx(ip1.real,rel=5e-2) == ip2.real
 
