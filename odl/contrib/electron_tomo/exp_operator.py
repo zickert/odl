@@ -25,7 +25,7 @@ class ExpOperator(Operator):
                                 'instance.'.format(domain))
             range = domain
 
-        super().__init__(domain, range, linear=False)
+        super(ExpOperator, self).__init__(domain, range, linear=False)
 
     def _call(self, x):
         """Implement ``self(x, out)``."""
@@ -38,7 +38,7 @@ class ExpOperator(Operator):
 
         class ExpOpDeriv(Operator):
             def __init__(self):
-                super().__init__(op.domain, op.range, linear=True)
+                super(ExpOpDeriv, self).__init__(op.domain, op.range, linear=True)
 
             def _call(self, h):
                 return exp_f * h
@@ -47,7 +47,7 @@ class ExpOperator(Operator):
             def adjoint(self):
                 class ExpOpDerivAdj(Operator):
                     def __init__(self):
-                        super().__init__(op.range, op.domain, linear=True)
+                        super(ExpOpDerivAdj, self).__init__(op.range, op.domain, linear=True)
 
                     def _call(self, g):
                         return exp_f.conj() * g
