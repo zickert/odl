@@ -45,7 +45,7 @@ class IntensityOperator(Operator):
                                 'instance.'.format(domain))
             range = domain.real_space
 
-        super().__init__(domain, range, linear=False)
+        super(IntensityOperator, self).__init__(domain, range, linear=False)
 
     def _call(self, x, out):
         """Implement ``self(x, out)``."""
@@ -83,7 +83,7 @@ class IntensityOperator(Operator):
 
         class IntensOpDeriv(Operator):
             def __init__(self):
-                super().__init__(op.domain, op.range, linear=True)
+                super(IntensOpDeriv, self).__init__(op.domain, op.range, linear=True)
 
             def _call(self, h):
                 return 2 * (f.real * h.real + f.imag * h.imag)
@@ -92,7 +92,7 @@ class IntensityOperator(Operator):
             def adjoint(self):
                 class IntensOpDerivAdj(Operator):
                     def __init__(self):
-                        super().__init__(op.range, op.domain, linear=True)
+                        super(IntensOpDerivAdj, self).__init__(op.range, op.domain, linear=True)
 
                     def _call(self, g, out):
                         out.real[:] = 2 * g * f.real
