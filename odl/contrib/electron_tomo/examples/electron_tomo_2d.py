@@ -71,7 +71,7 @@ callback = (odl.solvers.CallbackPrintIteration() &
             odl.solvers.CallbackShow())
 
 
-kaczmarz_plan = make_kaczmarz_plan(360, num_blocks_per_superblock = 6, method = 'random')
+kaczmarz_plan = make_kaczmarz_plan(360, num_blocks_per_superblock = 6, method = 'mls')
 
 ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 

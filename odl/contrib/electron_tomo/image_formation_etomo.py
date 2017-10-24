@@ -65,6 +65,7 @@ def modulation_transfer_function(x, **kwargs):
 
     return result
 
+
 def optics_imperfections(x, **kwargs):
     """Function encoding the phase shifts due to optics imperfections.
 
@@ -102,6 +103,7 @@ def optics_imperfections(x, **kwargs):
     result = np.exp(1j * result)
 
     return result
+
 
 def make_imageFormationOp(domain, wave_number, spherical_abe, defocus, det_size,
                           magnification, abs_phase_ratio = 1.0, obj_magnitude=1.0, **kwargs):
