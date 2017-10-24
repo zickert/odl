@@ -26,14 +26,14 @@ class CastOperator(Operator):
                                 'instance.'.format(domain))
             range = domain
 
-        super().__init__(domain, range, linear=True)
+        super(CastOperator, self).__init__(domain, range, linear=True)
 
     def _call(self, x):
         return self.range.element(x.asarray())
 
     @property
     def adjoint(self):
-         return CastOperator(domain = self.range, range = self.domain)
+        return CastOperator(domain = self.range, range = self.domain)
      
         
 if __name__ == '__main__':
