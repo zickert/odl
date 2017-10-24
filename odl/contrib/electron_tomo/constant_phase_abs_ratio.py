@@ -32,7 +32,7 @@ class ConstantPhaseAbsRatio(Operator):
                                 'instance.'.format(domain))
             range = domain.complex_space
 
-        super().__init__(domain, range, linear=True)
+        super(ConstantPhaseAbsRatio, self).__init__(domain, range, linear=True)
 
         self.abs_phase_ratio = abs_phase_ratio
         self.magnitude_factor = magnitude_factor
@@ -47,7 +47,7 @@ class ConstantPhaseAbsRatio(Operator):
 
         class AbsPhaseAdj(Operator):
             def __init__(self, op):
-                super().__init__(op.range, op.domain, linear=True)
+                super(AbsPhaseAdj, self).__init__(op.range, op.domain, linear=True)
                 self.embedding_factor_c = np.conj(op.embedding_factor)
 
             def _call(self, g):
