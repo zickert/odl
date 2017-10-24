@@ -11,7 +11,7 @@ from odl.contrib.electron_tomo.cast_operator import CastOperator
 from random import shuffle
 
 
-def make_kaczmarz_plan(num_blocks, method='sequential',
+def make_kaczmarz_plan(num_blocks, method='random',
                        num_blocks_per_superblock=1):
 
     indices = list(range(num_blocks))
@@ -23,8 +23,9 @@ def make_kaczmarz_plan(num_blocks, method='sequential',
                      for j in range(num_super_blocks)]
 
     if method == 'random':
-        # TODO: shuffle indices
         shuffle(block_indices)
+    elif method == 'mls
+        makeMLSOrder(block_indices)
     elif method == 'sequential':
         pass
 
