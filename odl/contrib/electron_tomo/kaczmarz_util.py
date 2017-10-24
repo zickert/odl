@@ -18,7 +18,7 @@ def make_kaczmarz_plan(num_blocks, method='random',
     indices = list(range(num_blocks))
     num_super_blocks = (num_blocks + (num_blocks_per_superblock-1)) // num_blocks_per_superblock
     if num_blocks % num_blocks_per_superblock != 0:
-        indices.extend(indices[ : num_blocks_per_superblock - (num_blocks % num_blocks_per_superblock)])
+        indices.extend(indices[: num_blocks_per_superblock - (num_blocks % num_blocks_per_superblock)])
 
     block_indices = [indices[j*num_blocks_per_superblock: (j+1)*num_blocks_per_superblock]
                      for j in range(num_super_blocks)]
@@ -73,9 +73,9 @@ def get_mls_order(tomo_angle_list, start_idx = None):
     return np.array(tomo_angle_list)[order].tolist()
 
 
-def make_Op_blocks(block_indices, Block_Op, Op_pre = None, Op_post = None):
+def make_Op_blocks(block_indices, Block_Op, Op_pre=None, Op_post=None):
 
-    if Op_post is not None:
+    if Op_pre is not None:
         if Op_post is not None:
             def get_Op(idx):
                 sub_op = Block_Op.get_sub_operator(block_indices[idx])
@@ -93,12 +93,12 @@ def make_Op_blocks(block_indices, Block_Op, Op_pre = None, Op_post = None):
             def get_Op(idx):
                 sub_op = Block_Op.get_sub_operator(block_indices[idx])
                 return sub_op
-                
+
     return get_Op
 
-    
-def make_data_blocks(data, block_indices, block_axis = 0):
-    
+
+def make_data_blocks(data, block_indices, block_axis=0):
+
     def get_data_block(idx):
         return data.asarray()[block_indices[idx]]
     
@@ -115,6 +115,4 @@ def next_greater_power_of_2(x):
 if __name__ == '__main__':
     print(get_mls_order(list(range(180))))
     print(get_mls_order([[2*jj, 2*jj+1] for jj in range(27)]))
-    
-
 
