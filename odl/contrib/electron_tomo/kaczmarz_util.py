@@ -57,7 +57,7 @@ def get_mls_order(tomo_angle_list, start_idx = None):
     order = np.arange(pow2_length)
     for jj in range(pow2):
         # divide-and-conquer-shuffling 
-        order = np.reshape(order, (2**jj, pow2_length/2**(jj+1), 2))
+        order = np.reshape(order, (2**jj, pow2_length//2**(jj+1), 2))
         order = np.transpose(order, (0,2,1))
         order = np.reshape(order, (pow2_length,) )
     
