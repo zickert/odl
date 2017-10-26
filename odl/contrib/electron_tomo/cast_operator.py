@@ -23,7 +23,7 @@ class CastOperator(Operator):
                                 'instance.'.format(domain))
             range = domain
 
-        super().__init__(domain, range, linear=True)
+        super(CastOperator, self).__init__(domain, range, linear=True)
 
     def _call(self, x):
         return self.range.element(x.asarray())

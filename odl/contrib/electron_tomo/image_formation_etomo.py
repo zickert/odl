@@ -110,7 +110,6 @@ def optics_imperfections(xi, **kwargs):
     return result
 
 
-
 def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
                           det_size, magnification, abs_phase_ratio=1,
                           obj_magnitude=1, rescale_ctf_factor=1,
@@ -164,3 +163,4 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
 
     
     return intens_op * optics_op * exp_op * ratio_op
+

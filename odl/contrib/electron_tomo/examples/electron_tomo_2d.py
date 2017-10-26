@@ -69,9 +69,7 @@ reco = reco_space.zero()
 callback = (odl.solvers.CallbackPrintIteration() &
             odl.solvers.CallbackShow())
 
-
-kaczmarz_plan = make_kaczmarz_plan(num_angles,
-                                   num_blocks_per_superblock = num_angles_per_kaczmarz_block, method = 'random')
+kaczmarz_plan = make_kaczmarz_plan(num_angles, num_blocks_per_superblock = num_angles_per_kaczmarz_block, method = 'mls')
 
 ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 
