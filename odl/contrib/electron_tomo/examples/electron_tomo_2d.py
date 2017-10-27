@@ -8,7 +8,6 @@ standard_library.install_aliases()
 
 import numpy as np
 import matplotlib.pyplot as plt
-import pytest
 import odl
 from odl.contrib.electron_tomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
 from odl.contrib.electron_tomo.block_ray_trafo import BlockRayTransform
@@ -44,11 +43,12 @@ angle_partition = odl.uniform_partition(0, np.pi, num_angles)
 detector_partition = odl.uniform_partition(-30, 30, 512)
 
 geometry = odl.tomo.Parallel2dGeometry(angle_partition, detector_partition)
-ray_trafo = BlockRayTransform(reco_space, geometry)  # odl.tomo.RayTransform(reco_space.complex_space, geometry)
+# ray_trafo = odl.tomo.RayTransform(reco_space.complex_space, geometry)
+ray_trafo = BlockRayTransform(reco_space, geometry)  
 
 imageFormation_op = make_imageFormationOp(ray_trafo.range, 
                                           wave_number, spherical_abe, defocus,
-                                          det_size, M, rescale_ctf_factor = ctf_scaling_factor,
+                                          det_size, M, rescale_ctf_factor=ctf_scaling_factor,
                                           obj_magnitude=obj_magnitude)
 
 mask = reco_space.element(spherical_mask, radius=19)
@@ -71,15 +71,16 @@ callback = (odl.solvers.CallbackPrintIteration() &
 
 
 kaczmarz_plan = make_kaczmarz_plan(num_angles,
-                                   num_blocks_per_superblock = num_angles_per_kaczmarz_block, method = 'mls')
+                                   num_blocks_per_superblock=num_angles_per_kaczmarz_block, method = 'mls')
 
 ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 
 
 F_post = make_imageFormationOp(ray_trafo_block.range, 
                                wave_number, spherical_abe, defocus, det_size,
-                               M, obj_magnitude=obj_magnitude, rescale_ctf_factor = ctf_scaling_factor)
-F_pre = odl.MultiplyOperator(mask,reco_space,reco_space)
+                               M, obj_magnitude=obj_magnitude,
+                               rescale_ctf_factor=ctf_scaling_factor)
+F_pre = odl.MultiplyOperator(mask, reco_space, reco_space)
 
 get_op = make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre, Op_post=F_post)
 get_data = make_data_blocks(data, kaczmarz_plan)
@@ -94,9 +95,9 @@ def nonneg_projection(x):
 
 
 # %%
-#    
-#reco = reco_space.zero()
-#kaczmarz_reco_method(get_op, reco, get_data, len(kaczmarz_plan),
+#
+# reco = reco_space.zero()
+# kaczmarz_reco_method(get_op, reco, get_data, len(kaczmarz_plan),
 #                     regpar*obj_magnitude ** 2, callback=callback,
 #                     num_cycles=num_cycles, projection=nonneg_projection)
 #
@@ -104,11 +105,13 @@ def nonneg_projection(x):
 # %%
 
 reco = reco_space.zero()
-get_proj_op = make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre, Op_post=None)
+get_proj_op = make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
+                             Op_post=None)
 
 kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
                      regpar*obj_magnitude ** 2, imageFormationOp = F_post,
-                     callback=callback, num_cycles=num_cycles, projection=nonneg_projection)
+                     callback=callback, num_cycles=num_cycles,
+                     projection=nonneg_projection)
 
 #
 #odl.solvers.conjugate_gradient_normal(forward_op.derivative(reco), reco, data - forward_op(reco),
@@ -137,4 +140,3 @@ kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
 #    ip2 = Ax_adj.inner(y_adj)
 #
 #    assert pytest.approx(ip1.real,rel=5e-2) == ip2.real
-

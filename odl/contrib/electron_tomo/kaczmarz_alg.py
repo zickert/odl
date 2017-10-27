@@ -17,13 +17,14 @@ def kaczmarz_reco_method(get_Op, reco, get_data, num_iterates_per_cycle,
             residual = data - op(reco)
 
 #            if do_CG_on_data_space:
-#                
+#
 #                A = op.derivative(reco)
 #                B = odl.IdentityOperator(A.range)
 #                T = A * A.adjoint + regpar * B.adjoint * B
-#                
+#
 #                d_reco_T = residual.space.zero()
-#                odl.solvers.conjugate_gradient(T, d_reco_T, residual, niter=niter_CG)
+#                odl.solvers.conjugate_gradient(T, d_reco_T, residual,
+#                                               niter=niter_CG)
 #                d_reco = A.adjoint(d_reco_T)
 
             A = op.derivative(reco)

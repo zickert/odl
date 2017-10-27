@@ -32,13 +32,14 @@ class ExpOperator(Operator):
         return np.exp(x)
 
     def derivative(self, f):
-        
+
         exp_f = np.exp(f)
         op = self
 
         class ExpOpDeriv(Operator):
             def __init__(self):
-                super(ExpOpDeriv, self).__init__(op.domain, op.range, linear=True)
+                super(ExpOpDeriv, self).__init__(op.domain, op.range,
+                                                 linear=True)
 
             def _call(self, h):
                 return exp_f * h
@@ -47,7 +48,9 @@ class ExpOperator(Operator):
             def adjoint(self):
                 class ExpOpDerivAdj(Operator):
                     def __init__(self):
-                        super(ExpOpDerivAdj, self).__init__(op.range, op.domain, linear=True)
+                        super(ExpOpDerivAdj, self).__init__(op.range,
+                                                            op.domain,
+                                                            linear=True)
 
                     def _call(self, g):
                         return exp_f.conj() * g

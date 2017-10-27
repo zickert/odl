@@ -92,11 +92,13 @@ mtf_beta = 40
 det_size = 16e-6  # m
 det_area = det_size ** 2  # m^2
 
-reco_space = odl.uniform_discr(min_pt=[-rescale_factor*95e-9/4, -rescale_factor*100e-9/4,
+reco_space = odl.uniform_discr(min_pt=[-rescale_factor*95e-9/4,
+                                       -rescale_factor*100e-9/4,
                                        -rescale_factor*80e-9/4],
-                               max_pt=[rescale_factor*95e-9/4, rescale_factor*100e-9/4,
+                               max_pt=[rescale_factor*95e-9/4,
+                                       rescale_factor*100e-9/4,
                                        rescale_factor*80e-9/4],
-                               shape=[95, 100, 80],dtype='float64')
+                               shape=[95, 100, 80], dtype='float64')
 
 angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, num_angles)
 detector_partition = odl.uniform_partition([-rescale_factor*det_size/M * 200/2] * 2,
@@ -108,12 +110,14 @@ detector_partition = odl.uniform_partition([-rescale_factor*det_size/M * 200/2] 
 geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition,
                                            axis=(1, 0, 0),
                                            det_pos_init=(0, 0, -1),
-                                           det_axes_init=((1, 0, 0), (0, 1, 0)))
+                                           det_axes_init=((1, 0, 0),
+                                                          (0, 1, 0)))
 ray_trafo = BlockRayTransform(reco_space, geometry)
 
 imageFormation_op = make_imageFormationOp(ray_trafo.range, 
                                           wave_number, spherical_abe, defocus,
-                                          det_size, M, rescale_ctf=True, rescale_ctf_factor=rescale_factor,
+                                          det_size, M, rescale_ctf=True,
+                                          rescale_ctf_factor=rescale_factor,
                                           obj_magnitude=obj_magnitude,
                                           abs_phase_ratio=abs_phase_ratio,
                                           dose_per_img=dose_per_img, gain=gain,

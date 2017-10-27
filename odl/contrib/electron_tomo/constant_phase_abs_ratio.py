@@ -47,7 +47,8 @@ class ConstantPhaseAbsRatio(Operator):
 
         class AbsPhaseAdj(Operator):
             def __init__(self, op):
-                super(AbsPhaseAdj, self).__init__(op.range, op.domain, linear=True)
+                super(AbsPhaseAdj, self).__init__(op.range, op.domain,
+                                                  linear=True)
                 self.embedding_factor_c = np.conj(op.embedding_factor)
 
             def _call(self, g):
