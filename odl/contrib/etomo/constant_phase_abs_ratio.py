@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Oct 16 11:28:52 2017
-
-@author: zickert
-"""
 from odl import Operator
 from odl import DiscreteLp
 import numpy as np
