@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Oct 16 09:43:49 2017
-
-@author: zickert
-"""
-
 import os
 from odl.contrib.mrc import (FileReaderMRC)
 import matplotlib.pyplot as plt
