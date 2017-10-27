@@ -2,6 +2,7 @@ import odl
 import numpy as np
 from odl.contrib.electron_tomo.cast_operator import CastOperator
 
+__all__ = ('kaczmarz_reco_method', 'kaczmarz_SART_method')
 
 def kaczmarz_reco_method(get_Op, reco, get_data, num_iterates_per_cycle,
                          regpar, num_cycles=1, callback=None,
