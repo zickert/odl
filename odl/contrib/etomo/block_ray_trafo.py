@@ -3,6 +3,7 @@ from odl.tomo import RayTransform
 
 __all__ = ('BlockRayTransform',)
 
+
 class BlockRayTransform(RayTransform):
 
     def __init__(self, domain, geometry, **kwargs):

@@ -8,7 +8,7 @@ Created on Tue Oct 17 10:23:11 2017
 
 import numpy as np
 import odl
-from odl.contrib.electron_tomo.cast_operator import CastOperator
+from odl.contrib.etomo.cast_operator import CastOperator
 from random import shuffle, randint
 
 __all__ = ('make_kaczmarz_plan', 'get_mls_order', 'make_Op_blocks',

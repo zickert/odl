@@ -8,9 +8,9 @@ Created on Tue Oct 17 16:37:29 2017
 
 import numpy as np
 import odl
-from odl.contrib.electron_tomo.intensity_op import IntensityOperator
-from odl.contrib.electron_tomo.exp_operator import ExpOperator
-from odl.contrib.electron_tomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
+from odl.contrib.etomo.exp_operator import ExpOperator
+from odl.contrib.etomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
+from odl.contrib.etomo.intensity_op import IntensityOperator
 
 __all__ = ('pupil_function', 'modulation_transfer_function',
            'optics_imperfections', 'make_imageFormationOp')
