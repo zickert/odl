@@ -1,15 +1,9 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Oct 20 10:18:09 2017
-
-@author: zickert
-"""
 from time import sleep
 import matplotlib.pyplot as plt
 import numpy as np
 
 __all__ = ('plot_3d_ortho_slices', 'plot_3d_axis_drive')
+
 
 def plot_3d_ortho_slices(obj_3d):
 
