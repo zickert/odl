@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Oct 17 16:37:29 2017
-
-@author: zickert
-"""
-
 import numpy as np
 import odl
 from odl.contrib.etomo.exp_operator import ExpOperator
