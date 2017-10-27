@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 
-
 """Phase contrast TEM reconstruction example."""
 
 # Imports for common Python 2/3 codebase
@@ -12,12 +11,7 @@ standard_library.install_aliases()
 import numpy as np
 import odl
 from timeit import timeit
-from odl.contrib.electron_tomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
-from odl.contrib.electron_tomo.block_ray_trafo import BlockRayTransform
-from odl.contrib.electron_tomo.kaczmarz_alg import *
-from odl.contrib.electron_tomo.image_formation_etomo import *
-from odl.contrib.electron_tomo.kaczmarz_util import *
-from odl.contrib.electron_tomo.support_constraint import spherical_mask
+from odl.contrib import etomo
 
 
 def circular_mask(x, **kwargs):
@@ -58,14 +52,14 @@ angle_partition = odl.uniform_partition(0, np.pi, num_angles)
 detector_partition = odl.uniform_partition([-30] * 2, [30] * 2, [200] * 2)
 
 geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition)
-ray_trafo = BlockRayTransform(reco_space, geometry)
+ray_trafo = etomo.BlockRayTransform(reco_space, geometry)
 
-imageFormation_op = make_imageFormationOp(ray_trafo.range, 
-                                          wave_number, spherical_abe, defocus,
-                                          det_size, M,
-                                          obj_magnitude=obj_magnitude)
+imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range, 
+                                                wave_number, spherical_abe,
+                                                defocus, det_size, M,
+                                                obj_magnitude=obj_magnitude)
 
-mask = reco_space.element(spherical_mask, radius=19)
+mask = reco_space.element(etomo.spherical_mask, radius=19)
 
 forward_op = imageFormation_op * ray_trafo * mask
 

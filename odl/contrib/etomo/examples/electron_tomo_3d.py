@@ -1,20 +1,10 @@
 """Phase contrast TEM reconstruction example."""
 
-# Imports for common Python 2/3 codebase
-from __future__ import print_function, division, absolute_import
-from future import standard_library
-standard_library.install_aliases()
-
 import numpy as np
 import matplotlib.pyplot as plt
 import odl
 from timeit import timeit
-from odl.contrib.electron_tomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
-from odl.contrib.electron_tomo.block_ray_trafo import BlockRayTransform
-from odl.contrib.electron_tomo.kaczmarz_alg import *
-from odl.contrib.electron_tomo.image_formation_etomo import *
-from odl.contrib.electron_tomo.kaczmarz_util import *
-from odl.contrib.electron_tomo.support_constraint import spherical_mask
+from odl.contrib import etomo
 
 
 def circular_mask(x, **kwargs):
@@ -58,17 +48,18 @@ angle_partition = odl.uniform_partition(0, np.pi, num_angles)
 detector_partition = odl.uniform_partition([-30] * 2, [30] * 2, [200] * 2)
 
 geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition)
-ray_trafo = BlockRayTransform(reco_space, geometry)
+ray_trafo = etomo.BlockRayTransform(reco_space, geometry)
 
 
 # %%
 
-imageFormation_op = make_imageFormationOp(ray_trafo.range, 
-                                          wave_number, spherical_abe, defocus,
-                                          det_size, M, rescale_ctf_factor=ctf_scaling_factor,
-                                          obj_magnitude=obj_magnitude)
+imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
+                                                wave_number, spherical_abe,
+                                                defocus, det_size, M,
+                                                rescale_ctf_factor=ctf_scaling_factor,
+                                                obj_magnitude=obj_magnitude)
 
-mask = reco_space.element(spherical_mask, radius=19)
+mask = reco_space.element(etomo.spherical_mask, radius=19)
 
 forward_op = imageFormation_op * ray_trafo * mask
 
@@ -89,21 +80,24 @@ callback = (odl.solvers.CallbackPrintIteration() &
             odl.solvers.CallbackShow())
 
 
-kaczmarz_plan = make_kaczmarz_plan(num_angles, num_blocks_per_superblock=num_angles_per_kaczmarz_block,
-                                   method='random')
+kaczmarz_plan = etomo.make_kaczmarz_plan(num_angles,
+                                         num_blocks_per_superblock=num_angles_per_kaczmarz_block,
+                                         method='random')
 
 ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 
 
-F_post = make_imageFormationOp(ray_trafo_block.range,
-                               wave_number, spherical_abe, defocus, det_size,
-                               M, rescale_ctf_factor=ctf_scaling_factor,
-                               obj_magnitude=obj_magnitude)
+F_post = etomo.make_imageFormationOp(ray_trafo_block.range,
+                                     wave_number, spherical_abe, defocus,
+                                     det_size, M,
+                                     rescale_ctf_factor=ctf_scaling_factor,
+                                     obj_magnitude=obj_magnitude)
 
 F_pre = odl.MultiplyOperator(mask, reco_space, reco_space)
 
-get_op = make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre, Op_post=F_post)
-get_data = make_data_blocks(data, kaczmarz_plan)
+get_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
+                              Op_post=F_post)
+get_data = etomo.make_data_blocks(data, kaczmarz_plan)
 
 # Optional nonnegativity-constraint
 nonneg_constraint = odl.solvers.IndicatorNonnegativity(reco_space).proximal(1)
@@ -123,11 +117,14 @@ def nonneg_projection(x):
 # %%
 
 reco = reco_space.zero()
-get_proj_op = make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre, Op_post=None)
+get_proj_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
+                                   Op_post=None)
 
-kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
-                     1e-1 * regpar*obj_magnitude ** 2, imageFormationOp = F_post, gamma_H1 = 0.9, niter_CG = 30,
-                     callback=callback, num_cycles=num_cycles, projection=nonneg_projection)
+etomo.kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
+                           1e-1 * regpar*obj_magnitude ** 2,
+                           imageFormationOp=F_post, gamma_H1=0.9, niter_CG=30,
+                           callback=callback, num_cycles=num_cycles,
+                           projection=nonneg_projection)
 
 # %%
 
@@ -135,7 +132,7 @@ reco_lin = reco_space.zero()
 
 odl.solvers.conjugate_gradient_normal(forward_op.derivative(reco_lin),
                                       reco_lin, data - forward_op(reco_lin),
-                                     niter=100, callback=callback)
+                                      niter=100, callback=callback)
 
 
 #reco = reco_space.zero()

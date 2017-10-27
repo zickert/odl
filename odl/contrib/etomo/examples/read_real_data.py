@@ -19,6 +19,8 @@ with FileReaderMRC(file_path_data) as reader:
 
 sliced_data = data[:, :, 40]
 
-plt.figure(); plt.imshow(sliced_data); plt.colorbar() #, vmin=-32768, vmax=-32500)
+plt.figure()
+plt.imshow(sliced_data)
+plt.colorbar()  # , vmin=-32768, vmax=-32500)
 
-#plt.figure(); plt.imshow(np.mean(data, axis=2)); plt.colorbar()
+# plt.figure(); plt.imshow(np.mean(data, axis=2)); plt.colorbar()

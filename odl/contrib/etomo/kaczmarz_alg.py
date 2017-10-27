@@ -1,8 +1,14 @@
 import odl
 import numpy as np
-from odl.contrib.electron_tomo.cast_operator import CastOperator
+from odl.contrib.etomo.cast_operator import CastOperator
+from odl.contrib.etomo.block_ray_trafo import BlockRayTransform
+from odl.contrib.etomo.kaczmarz_util import make_kaczmarz_plan
+from odl.contrib.etomo.kaczmarz_util import make_data_blocks
+from odl.contrib.etomo.kaczmarz_util import make_Op_blocks
+
 
 __all__ = ('kaczmarz_reco_method', 'kaczmarz_SART_method')
+
 
 def kaczmarz_reco_method(get_Op, reco, get_data, num_iterates_per_cycle,
                          regpar, num_cycles=1, callback=None,
@@ -123,22 +129,18 @@ def kaczmarz_SART_method(get_ProjOp, reco, get_data, num_iterates_per_cycle,
 #            unit_proj_2 = backproj_correction_factor * ray_trafo(ray_trafo.adjoint(ray_trafo.range.one()))
 #            unit_proj_2.show()
 #            unit_proj.show()
-            
+
             reco += ray_trafo.adjoint(backproj_correction_factor * d_p_tilde)
-            
+
             if projection is not None:
                 projection(reco)
-    
+
             if callback is not None:
-                callback(reco)              
-                
-                
-                
+                callback(reco)
+
+
 if __name__ == '__main__':
-    import numpy as np
-    from odl.contrib.electron_tomo.kaczmarz_util import *
-    from odl.contrib.electron_tomo.block_ray_trafo import BlockRayTransform
-    
+
     num_angles = 360
     num_angles_per_Kaczmarz_block = 1
     num_cycles = 3
@@ -146,30 +148,32 @@ if __name__ == '__main__':
 
     reco_space = odl.uniform_discr(
         min_pt=[-20, -20], max_pt=[20, 20], shape=[300, 300])
-    
+
     angle_partition = odl.uniform_partition(0, np.pi, num_angles)
     detector_partition = odl.uniform_partition(-30, 30, 512)
-    
+
     geometry = odl.tomo.Parallel2dGeometry(angle_partition, detector_partition)
-    
+
     block_ray_trafo = BlockRayTransform(reco_space, geometry)
-    
-    phantom = odl.phantom.shepp_logan(reco_space,modified=True)
-    phantom.show() 
-    
+
+    phantom = odl.phantom.shepp_logan(reco_space, modified=True)
+    phantom.show()
+
     # Compute and show full data
     data = block_ray_trafo(phantom)
     data.show()
 
     callback = (odl.solvers.CallbackPrintIteration() &
-            odl.solvers.CallbackShow())
-    
-    kaczmarz_plan = make_kaczmarz_plan(num_angles, num_blocks_per_superblock = num_angles_per_Kaczmarz_block, method='random')
+                odl.solvers.CallbackShow())
+
+    kaczmarz_plan = make_kaczmarz_plan(num_angles,
+                                       num_blocks_per_superblock=num_angles_per_Kaczmarz_block,
+                                       method='random')
     get_op = make_Op_blocks(kaczmarz_plan, block_ray_trafo)
     get_data = make_data_blocks(data, kaczmarz_plan)
-    
+
     reco = reco_space.zero()
-    #kaczmarz_reco_method(get_op, reco, get_data, len(kaczmarz_plan), regpar, callback=callback, num_cycles=num_cycles)
+    #  kaczmarz_reco_method(get_op, reco, get_data, len(kaczmarz_plan), regpar, callback=callback, num_cycles=num_cycles)
     kaczmarz_SART_method(get_op, reco, get_data, len(kaczmarz_plan), regpar,
                          imageFormationOp=odl.IdentityOperator(get_op(0).range),
                          callback=callback, num_cycles=num_cycles)

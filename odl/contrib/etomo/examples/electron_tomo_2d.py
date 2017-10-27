@@ -4,12 +4,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import odl
-from odl.contrib.electron_tomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
-from odl.contrib.electron_tomo.block_ray_trafo import BlockRayTransform
-from odl.contrib.electron_tomo.kaczmarz_alg import *
-from odl.contrib.electron_tomo.image_formation_etomo import *
-from odl.contrib.electron_tomo.kaczmarz_util import *
-from odl.contrib.electron_tomo.support_constraint import spherical_mask
+from odl.contrib import etomo
 
 
 obj_magnitude = 1e-2
@@ -39,14 +34,15 @@ detector_partition = odl.uniform_partition(-30, 30, 512)
 
 geometry = odl.tomo.Parallel2dGeometry(angle_partition, detector_partition)
 # ray_trafo = odl.tomo.RayTransform(reco_space.complex_space, geometry)
-ray_trafo = BlockRayTransform(reco_space, geometry)  
+ray_trafo = etomo.BlockRayTransform(reco_space, geometry)
 
-imageFormation_op = make_imageFormationOp(ray_trafo.range, 
-                                          wave_number, spherical_abe, defocus,
-                                          det_size, M, rescale_ctf_factor=ctf_scaling_factor,
-                                          obj_magnitude=obj_magnitude)
+imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
+                                                wave_number, spherical_abe,
+                                                defocus, det_size, M,
+                                                rescale_ctf_factor=ctf_scaling_factor,
+                                                obj_magnitude=obj_magnitude)
 
-mask = reco_space.element(spherical_mask, radius=19)
+mask = reco_space.element(etomo.spherical_mask, radius=19)
 
 # Leave out detector operator for simplicity
 forward_op = imageFormation_op * ray_trafo * mask
@@ -65,20 +61,22 @@ callback = (odl.solvers.CallbackPrintIteration() &
             odl.solvers.CallbackShow())
 
 
-kaczmarz_plan = make_kaczmarz_plan(num_angles,
-                                   num_blocks_per_superblock=num_angles_per_kaczmarz_block, method = 'mls')
+kaczmarz_plan = etomo.make_kaczmarz_plan(num_angles,
+                                         num_blocks_per_superblock=num_angles_per_kaczmarz_block,
+                                         method='mls')
 
 ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 
 
-F_post = make_imageFormationOp(ray_trafo_block.range, 
-                               wave_number, spherical_abe, defocus, det_size,
-                               M, obj_magnitude=obj_magnitude,
-                               rescale_ctf_factor=ctf_scaling_factor)
+F_post = etomo.make_imageFormationOp(ray_trafo_block.range,
+                                     wave_number, spherical_abe, defocus,
+                                     det_size, M, obj_magnitude=obj_magnitude,
+                                     rescale_ctf_factor=ctf_scaling_factor)
 F_pre = odl.MultiplyOperator(mask, reco_space, reco_space)
 
-get_op = make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre, Op_post=F_post)
-get_data = make_data_blocks(data, kaczmarz_plan)
+get_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
+                              Op_post=F_post)
+get_data = etomo.make_data_blocks(data, kaczmarz_plan)
 
 
 # Optional nonnegativity-constraint
@@ -92,7 +90,7 @@ def nonneg_projection(x):
 # %%
 #
 # reco = reco_space.zero()
-# kaczmarz_reco_method(get_op, reco, get_data, len(kaczmarz_plan),
+# etomo.kaczmarz_reco_method(get_op, reco, get_data, len(kaczmarz_plan),
 #                     regpar*obj_magnitude ** 2, callback=callback,
 #                     num_cycles=num_cycles, projection=nonneg_projection)
 #
@@ -100,13 +98,13 @@ def nonneg_projection(x):
 # %%
 
 reco = reco_space.zero()
-get_proj_op = make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
-                             Op_post=None)
+get_proj_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
+                                   Op_post=None)
 
-kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
-                     regpar*obj_magnitude ** 2, imageFormationOp = F_post,
-                     callback=callback, num_cycles=num_cycles,
-                     projection=nonneg_projection)
+etomo.kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
+                           regpar*obj_magnitude ** 2,
+                           imageFormationOp=F_post, callback=callback,
+                           num_cycles=num_cycles, projection=nonneg_projection)
 
 #
 #odl.solvers.conjugate_gradient_normal(forward_op.derivative(reco), reco, data - forward_op(reco),
