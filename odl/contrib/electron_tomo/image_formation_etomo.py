@@ -12,6 +12,9 @@ from odl.contrib.electron_tomo.intensity_op import IntensityOperator
 from odl.contrib.electron_tomo.exp_operator import ExpOperator
 from odl.contrib.electron_tomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
 
+__all__ = ('pupil_function', 'modulation_transfer_function',
+           'optics_imperfections', 'make_imageFormationOp')
+
 
 def pupil_function(x, **kwargs):
     """Indicator function for the disc-shaped aperture, a.k.a. pupil function.

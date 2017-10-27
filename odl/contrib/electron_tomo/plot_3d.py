@@ -9,6 +9,7 @@ from time import sleep
 import matplotlib.pyplot as plt
 import numpy as np
 
+__all__ = ('plot_3d_ortho_slices', 'plot_3d_axis_drive')
 
 def plot_3d_ortho_slices(obj_3d):
 

@@ -1,6 +1,7 @@
 import odl
 from odl.tomo import RayTransform
 
+__all__ = ('BlockRayTransform',)
 
 class BlockRayTransform(RayTransform):
 

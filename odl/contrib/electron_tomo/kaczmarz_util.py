@@ -11,6 +11,9 @@ import odl
 from odl.contrib.electron_tomo.cast_operator import CastOperator
 from random import shuffle, randint
 
+__all__ = ('make_kaczmarz_plan', 'get_mls_order', 'make_Op_blocks',
+           'make_data_blocks', 'next_greater_power_of_2')
+
 
 def make_kaczmarz_plan(num_blocks, method='random',
                        num_blocks_per_superblock=1):

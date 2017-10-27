@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
+__all__ = ('spherical_mask',)
+
 
 def spherical_mask(x, **kwargs):
     radius = kwargs.pop('radius')
