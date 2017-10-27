@@ -75,16 +75,21 @@ det_size = 16e-6  # m
 det_area = det_size ** 2  # m^2
 
 
-
-reco_space = odl.uniform_discr(min_pt=[-rescale_factor*256*voxel_size, -rescale_factor*128*voxel_size,
+reco_space = odl.uniform_discr(min_pt=[-rescale_factor*256*voxel_size,
+                                       -rescale_factor*128*voxel_size,
                                        -rescale_factor*128*voxel_size],
-                               max_pt=[rescale_factor*256*voxel_size, rescale_factor*128*voxel_size,
+                               max_pt=[rescale_factor*256*voxel_size,
+                                       rescale_factor*128*voxel_size,
                                        rescale_factor*128*voxel_size],
-                               shape=[512, 256, 512],dtype='float64')
+                               shape=[512, 256, 512], dtype='float64')
 
-angle_partition = odl.uniform_partition(-62.18*np.pi/180, 58.03*np.pi/180, num_angles)
-detector_partition = odl.uniform_partition([-rescale_factor*256*voxel_size, -rescale_factor*128*voxel_size],
-                                           [rescale_factor*256*voxel_size, rescale_factor*128*voxel_size], [512,256])
+angle_partition = odl.uniform_partition(-62.18*np.pi/180, 58.03*np.pi/180,
+                                        num_angles)
+detector_partition = odl.uniform_partition([-rescale_factor*256*voxel_size,
+                                            -rescale_factor*128*voxel_size],
+                                           [rescale_factor*256*voxel_size,
+                                            rescale_factor*128*voxel_size],
+                                           [512, 256])
 
 # The x-axis is the tilt-axis.
 # Check that the geometry matches the one from TEM-simulator!
@@ -92,12 +97,14 @@ detector_partition = odl.uniform_partition([-rescale_factor*256*voxel_size, -res
 geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition,
                                            axis=(0, 1, 0),
                                            det_pos_init=(0, 0, 1),
-                                           det_axes_init=((1, 0, 0), (0, 1, 0)))
+                                           det_axes_init=((1, 0, 0),
+                                                          (0, 1, 0)))
 ray_trafo = BlockRayTransform(reco_space, geometry)
 
 imageFormation_op = make_imageFormationOp(ray_trafo.range, 
                                           wave_number, spherical_abe, defocus,
-                                          det_size, M, rescale_ctf=True, rescale_ctf_factor=rescale_factor,
+                                          det_size, M, rescale_ctf=True,
+                                          rescale_ctf_factor=rescale_factor,
                                           obj_magnitude=obj_magnitude,
                                           abs_phase_ratio=abs_phase_ratio,
                                           dose_per_img=dose_per_img, gain=gain,
@@ -106,13 +113,14 @@ imageFormation_op = make_imageFormationOp(ray_trafo.range,
 mask = reco_space.element(spherical_mask, radius=rescale_factor * 1) # * 55e-9)
 
 forward_op = imageFormation_op * ray_trafo * mask
-data = forward_op.range.element(np.transpose(data - detector_zero_level, (2, 0, 1)))
+data = forward_op.range.element(np.transpose(data - detector_zero_level,
+                                             (2, 0, 1)))
 
 data.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
 
 data_bc = buffer_correction(data)
 
-data_bc.show(coords = [0, [-2e1, 2e1], [-2e1, 2e1]])
+data_bc.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
 
 data_renormalized = data_bc * np.mean(imageFormation_op(imageFormation_op.domain.zero()).asarray())
 

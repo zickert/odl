@@ -65,7 +65,7 @@ ray_trafo = BlockRayTransform(reco_space, geometry)
 
 imageFormation_op = make_imageFormationOp(ray_trafo.range, 
                                           wave_number, spherical_abe, defocus,
-                                          det_size, M, rescale_ctf_factor = ctf_scaling_factor,
+                                          det_size, M, rescale_ctf_factor=ctf_scaling_factor,
                                           obj_magnitude=obj_magnitude)
 
 mask = reco_space.element(spherical_mask, radius=19)
@@ -97,7 +97,8 @@ ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 
 F_post = make_imageFormationOp(ray_trafo_block.range,
                                wave_number, spherical_abe, defocus, det_size,
-                               M, rescale_ctf_factor = ctf_scaling_factor, obj_magnitude=obj_magnitude)
+                               M, rescale_ctf_factor=ctf_scaling_factor,
+                               obj_magnitude=obj_magnitude)
 
 F_pre = odl.MultiplyOperator(mask, reco_space, reco_space)
 
