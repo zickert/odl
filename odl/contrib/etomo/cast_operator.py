@@ -35,14 +35,3 @@ class CastOperator(Operator):
     @property
     def inverse(self):
         return CastOperator(domain=self.range, range=self.domain)
-
-
-if __name__ == '__main__':
-
-    cast_domain = odl.uniform_discr(min_pt=[-20, -20], max_pt=[20, 20],
-                                    shape=[300, 300])
-    cast_range = cast_domain.complex_space
-
-    cast = CastOperator(cast_domain, cast_range)
-
-    one_cplx = cast(cast_domain.one())
