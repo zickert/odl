@@ -6,10 +6,13 @@ __all__ = ('BlockRayTransform',)
 
 class BlockRayTransform(RayTransform):
 
+    """Ray transform as a block operator."""
+
     def __init__(self, domain, geometry, **kwargs):
         super(BlockRayTransform, self).__init__(domain, geometry, **kwargs)
 
     def get_sub_operator(self, sub_op_idx):
+        """Return a block of the ray transform."""
         return odl.tomo.RayTransform(self.domain, self.geometry[sub_op_idx])
 
 

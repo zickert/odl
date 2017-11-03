@@ -7,8 +7,6 @@ __all__ = ('ExpOperator',)
 
 class ExpOperator(Operator):
 
-    """Intensity mapping of a vectorial function."""
-
     def __init__(self, domain=None, range=None):
         if domain is None and range is None:
             raise ValueError('either domain or range must be specified.')
@@ -28,7 +26,7 @@ class ExpOperator(Operator):
         super(ExpOperator, self).__init__(domain, range, linear=False)
 
     def _call(self, x):
-        """Implement ``self(x, out)``."""
+        """Implement ``self(x)``."""
         return np.exp(x)
 
     def derivative(self, f):

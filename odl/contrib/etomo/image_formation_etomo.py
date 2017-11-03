@@ -88,12 +88,12 @@ def optics_imperfections(xi, **kwargs):
     spherical_abe = kwargs.pop('spherical_abe')
     defocus = kwargs.pop('defocus')
     axes = kwargs.pop('axes')
-    rescale_ctf_factor = kwargs.pop('rescale_ctf_factor')
+    rescale_factor = kwargs.pop('rescale_factor')
 
     norm_sq = np.sum(xi[dim] ** 2 for dim in axes)
     # Rescale to account for larger detector in toy examples
     # rescale_factor = (30 / (det_size / magnification * 100)) ** 2
-    norm_sq *= rescale_ctf_factor ** 2
+    norm_sq *= rescale_factor ** 2
     result = - (1 / (4 * wave_number)) * norm_sq * (norm_sq * spherical_abe /
                                                     wave_number ** 2 - 2 *
                                                     defocus)
@@ -103,48 +103,37 @@ def optics_imperfections(xi, **kwargs):
 
 
 def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
-                          det_size, magnification, abs_phase_ratio=1,
-                          obj_magnitude=1, rescale_ctf_factor=1,
-                          dose_per_img=1, gain=1, det_area=1, **kwargs):
+                          abs_phase_ratio=1, obj_magnitude=1,
+                          rescale_factor=1, **kwargs):
 
     ratio_op = ConstantPhaseAbsRatio(domain, abs_phase_ratio=abs_phase_ratio,
                                      magnitude_factor=obj_magnitude)
+
+    # Create (pointwise) exponential operator.
     exp_op = ExpOperator(ratio_op.range)
 
-#    if exp_op.range.shape[0] == 1:
-#        ft_0_domain = odl.uniform_discr(min_pt=[-20]*(domain.ndim-1),
-#                                        max_pt=[20]*(domain.ndim-1),
-#                                        shape=exp_op.range.shape[1:],
-#                                        dtype='complex128')
-#        ft_ctf_0 = odl.trafos.FourierTransform(ft_0_domain, impl='pyfftw')
-#        cast_ft_1 = CastOperator(exp_op.range, ft_ctf_0.domain)
-#        cast_ft_2 = CastOperator(ft_ctf_0.range, exp_op.range)
-#        ft_ctf = cast_ft_2 * ft_ctf_0 * cast_ft_1
-#        ft_axes = list(range(1, domain.ndim))
-#    else:
+    # Get axes on which to perform FT.
     ft_axes = list(range(1, domain.ndim))
-    ft_ctf = odl.trafos.FourierTransform(exp_op.range,
-                                         axes=ft_axes,
-                                         impl='pyfftw')
+
+    # Create (partial) FT
+    ft_ctf = odl.trafos.FourierTransform(exp_op.range, axes=ft_axes)
 
     optics_imperf = ft_ctf.range.element(optics_imperfections,
                                          wave_number=wave_number,
                                          spherical_abe=spherical_abe,
-                                         defocus=defocus,
-                                         det_size=det_size,
-                                         magnification=magnification,
-                                         axes=ft_axes,
-                                         rescale_ctf_factor=rescale_ctf_factor)
+                                         defocus=defocus, axes=ft_axes,
+                                         rescale_factor=rescale_factor)
 
-    # Leave out pupil-function since it has no effect
+    # Leave out pupil-function in the ctf
     ctf = optics_imperf
 
+    # The optics operator is a multiplication in frequency-space
     optics_op = ft_ctf.inverse * ctf * ft_ctf
     intens_op = IntensityOperator(optics_op.range)
 
-#    optics_op_cst = 2*np.pi /(magnification*(2*np.pi)**2)
-#    det_op_cst = det_area * dose_per_img * gain
-#    total_cst = optics_op_cst ** 2 * det_op_cst
+    # optics_op_cst = 2*np.pi /(magnification*(2*np.pi)**2)
+    # det_op_cst = det_area * dose_per_img * gain
+    # total_cst = optics_op_cst ** 2 * det_op_cst
 
     # Check behaviour of the MTF
     # ft_det = odl.trafos.FourierTransform(intens_op.range, axes=[1, 2])

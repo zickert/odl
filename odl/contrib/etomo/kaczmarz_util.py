@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Oct 17 10:23:11 2017
-
-@author: zickert
-"""
-
 import numpy as np
 import odl
 from odl.contrib.etomo.cast_operator import CastOperator
@@ -16,14 +8,14 @@ __all__ = ('make_kaczmarz_plan', 'get_mls_order', 'make_Op_blocks',
 
 
 def make_kaczmarz_plan(num_blocks, method='random',
-                       num_blocks_per_superblock=1):
+                       block_length=1):
 
     indices = list(range(num_blocks))
-    num_super_blocks = (num_blocks + (num_blocks_per_superblock-1)) // num_blocks_per_superblock
-    if num_blocks % num_blocks_per_superblock != 0:
-        indices.extend(indices[: num_blocks_per_superblock - (num_blocks % num_blocks_per_superblock)])
+    num_super_blocks = (num_blocks + (block_length-1)) // block_length
+    if num_blocks % block_length != 0:
+        indices.extend(indices[: block_length - (num_blocks % block_length)])
 
-    block_indices = [indices[j*num_blocks_per_superblock: (j+1)*num_blocks_per_superblock]
+    block_indices = [indices[j*block_length: (j+1)*block_length]
                      for j in range(num_super_blocks)]
 
     if method == 'random':          # Randomized ordering
