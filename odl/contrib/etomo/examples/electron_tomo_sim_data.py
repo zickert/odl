@@ -1,16 +1,14 @@
-"""Phase contrast TEM reconstruction example."""
+"""Electron tomography reconstruction example using data from TEM-Simulator"""
 
 
 import numpy as np
-
 import os
 import odl
 from odl.contrib import etomo
-
 import matplotlib.pyplot as plt 
-
 from odl.contrib.mrc import FileReaderMRC
 
+# Read phantom and data.
 dir_path = os.path.abspath('/home/zickert/TEM_reco_project/One_particle_new_simulation')
 file_path_phantom = os.path.join(dir_path, 'rna_phantom.mrc')
 file_path_phantom_abs = os.path.join(dir_path, 'rna_phantom_abs.mrc')
@@ -32,7 +30,8 @@ with FileReaderMRC(file_path_tiltseries) as tiltseries_reader:
 with FileReaderMRC(file_path_tiltseries_nonoise) as tiltseries_nonoise_reader:
     tiltseries_nonoise_header, data_nonoise_asarray = tiltseries_nonoise_reader.read()
 
-
+# The reconstruction space will be rescaled according to rescale_factor in
+# order to avoid numerical issues related to having a very small reco space.
 rescale_factor = 1e9
 
 #  Define some physical constants
@@ -49,13 +48,12 @@ abs_phase_ratio = 0.5
 obj_magnitude = 0.5*sigma / rescale_factor
 regpar = 2e3
 num_angles = 61
-num_angles_per_kaczmarz_block = 1
+num_angles_per_block = 1
 num_cycles = 3
 
-
-total_dose = 5000 * 1e18  # total electron dose per m^2
-dose_per_img = total_dose / 61
-gain = 80  # average nr of digital counts per incident electron
+# total_dose = 5000 * 1e18  # total electron dose per m^2
+# dose_per_img = total_dose / 61
+# gain = 80  # average nr of digital counts per incident electron
 
 # Define sample diameter and height. We take flat sample
 sample_diam = 1200e-9  # m
@@ -69,18 +67,10 @@ focal_length = 2.7e-3  # m
 spherical_abe = 2.1e-3  # m
 defocus = 3e-6  # m
 
-# Define constants defining the modulation transfer function. (a,b,c) = (0,0,1)
-# corresponds to det_op = identity_op
-mtf_a = 0
-mtf_b = 0
-mtf_c = 1
-mtf_alpha = 10
-mtf_beta = 40
-
 # Set size of detector pixels (before rescaling to account for magnification)
 det_size = 16e-6  # m
-det_area = det_size ** 2  # m^2
 
+# Reconstruction space: discretized functions on a cuboid
 reco_space = odl.uniform_discr(min_pt=[-rescale_factor*95e-9/4,
                                        -rescale_factor*100e-9/4,
                                        -rescale_factor*80e-9/4],
@@ -88,35 +78,36 @@ reco_space = odl.uniform_discr(min_pt=[-rescale_factor*95e-9/4,
                                        rescale_factor*100e-9/4,
                                        rescale_factor*80e-9/4],
                                shape=[95, 100, 80], dtype='float64')
-
+# Make a 3d single-axis parallel beam geometry with flat detector
+# Angles: uniformly spaced, n = 180, min = 0, max = pi
 angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, num_angles)
 detector_partition = odl.uniform_partition([-rescale_factor*det_size/M * 200/2] * 2,
                                            [rescale_factor*det_size/M * 200/2] * 2, [200] * 2)
 
 # The x-axis is the tilt-axis.
-# Check that the geometry matches the one from TEM-simulator!
-# In particular, check that det_pos_init and det_axes_init are correct.
 geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition,
                                            axis=(1, 0, 0),
                                            det_pos_init=(0, 0, -1),
                                            det_axes_init=((1, 0, 0),
                                                           (0, 1, 0)))
+
+# Ray transform
 ray_trafo = etomo.BlockRayTransform(reco_space, geometry)
 
+# The image-formation operator models the optics and the detector
+# of the electron microscope.
 imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range, 
                                                 wave_number, spherical_abe,
-                                                defocus, det_size, M,
-                                                rescale_ctf=True,
-                                                rescale_ctf_factor=rescale_factor,
+                                                defocus,
+                                                rescale_factor=rescale_factor,
                                                 obj_magnitude=obj_magnitude,
-                                                abs_phase_ratio=abs_phase_ratio,
-                                                dose_per_img=dose_per_img, gain=gain,
-                                                det_area=det_area)
+                                                abs_phase_ratio=abs_phase_ratio)
 
+# Define a spherical mask to implement support constraint.
 mask = reco_space.element(etomo.spherical_mask,
                           radius=rescale_factor * 10.0e-9)
 
-# Leave out detector operator for simplicity
+# Define forward operator as a composition
 forward_op = imageFormation_op * ray_trafo
 
 phantom = reco_space.element(phantom_asarray)
@@ -126,10 +117,9 @@ phantom_abs = reco_space.element(phantom_abs_asarray)
 
 # remove background
 bg_cst = np.min(phantom)
-
 phantom -= bg_cst
 
-
+# Create data by calling the forward operator on the phantom
 data = forward_op(phantom)
 
 true_data = forward_op.range.element(np.transpose(data_asarray,
@@ -138,6 +128,7 @@ true_data = forward_op.range.element(np.transpose(data_asarray,
 
 reco = ray_trafo.domain.zero()
 
+# Plot phantom and data
 phantom.show(coords=[0, None, None])
 phantom_abs.show(coords=[0, None, None])
 data.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
@@ -163,9 +154,11 @@ true_data.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
 #data_bg = forward_op_bg(background)
 #data_bg.show(coords=[0,None,None])
 
+# Correct for diffrent pathlenght of the electrons through the buffer  
 true_data_bc = etomo.buffer_correction(true_data)
 data_bc = etomo.buffer_correction(data)
 
+# Plot corrected data
 data_bc.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
 true_data_bc.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
 
@@ -179,19 +172,16 @@ callback = (odl.solvers.CallbackPrintIteration() &
 
 
 kaczmarz_plan = etomo.make_kaczmarz_plan(num_angles,
-                                         num_blocks_per_superblock=num_angles_per_kaczmarz_block,
+                                         block_length=num_angles_per_block,
                                          method='random')
 
 ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 
 F_post = etomo.make_imageFormationOp(ray_trafo_block.range, wave_number,
-                                     spherical_abe, defocus, det_size, M,
-                                     rescale_ctf=True,
+                                     spherical_abe, defocus,
                                      rescale_ctf_factor=rescale_factor,
                                      obj_magnitude=obj_magnitude,
-                                     abs_phase_ratio=abs_phase_ratio,
-                                     dose_per_img=dose_per_img, gain=gain,
-                                     det_area=det_area)
+                                     abs_phase_ratio=abs_phase_ratio)
 
 F_pre = odl.MultiplyOperator(mask, reco_space, reco_space)
 

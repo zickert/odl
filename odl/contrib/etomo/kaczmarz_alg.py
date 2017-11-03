@@ -142,7 +142,7 @@ def kaczmarz_SART_method(get_ProjOp, reco, get_data, num_iterates_per_cycle,
 if __name__ == '__main__':
 
     num_angles = 360
-    num_angles_per_Kaczmarz_block = 1
+    num_angles_per_block = 1
     num_cycles = 3
     regpar = 1e-1
 
@@ -167,7 +167,7 @@ if __name__ == '__main__':
                 odl.solvers.CallbackShow())
 
     kaczmarz_plan = make_kaczmarz_plan(num_angles,
-                                       num_blocks_per_superblock=num_angles_per_Kaczmarz_block,
+                                       block_length=num_angles_per_block,
                                        method='random')
     get_op = make_Op_blocks(kaczmarz_plan, block_ray_trafo)
     get_data = make_data_blocks(data, kaczmarz_plan)
