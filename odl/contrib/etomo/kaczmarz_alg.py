@@ -1,10 +1,5 @@
 import odl
 import numpy as np
-<<<<<<< HEAD
-=======
-import pylab as pl
-from time import sleep
->>>>>>> 2dfb848... Fixed boundary artifacts in kaczmarz_SART_method
 from odl.contrib.etomo.cast_operator import CastOperator
 from odl.contrib.etomo.block_ray_trafo import BlockRayTransform
 from odl.contrib.etomo.kaczmarz_util import make_kaczmarz_plan
