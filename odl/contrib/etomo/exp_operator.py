@@ -7,7 +7,29 @@ __all__ = ('ExpOperator',)
 
 class ExpOperator(Operator):
 
+    """Operator mapping a function to its pointwise exponential."""
+
     def __init__(self, domain=None, range=None):
+        """Initialize a new instance.
+
+        Parameters
+        ----------
+        domain : `DiscreteLp`, optional
+            The space of elements which the operator acts on. If
+            ``range`` is given, ``domain`` must be a power space
+            of ``range``.
+        range : `DiscreteLp`, optional
+            The space of elements to which the operator maps.
+            This is required if ``domain`` is not given.
+
+        Notes
+        -----
+        This operator maps a real-valued function to its pointwise exponential
+
+        .. math::
+            \\text{Exp}(f(\cdot)) = e^{f(\cdot)}.
+
+        """
         if domain is None and range is None:
             raise ValueError('either domain or range must be specified.')
 
@@ -30,7 +52,31 @@ class ExpOperator(Operator):
         return np.exp(x)
 
     def derivative(self, f):
+        """Return the derivative operator in ``f``.
 
+        Parameters
+        ----------
+        f : domain element
+            Point at which the derivative is taken
+
+        Returns
+        -------
+        deriv : `Operator`
+            Derivative operator at the specified point
+
+        Notes
+        -----
+        The derivative of the exponential operator is given by
+
+        .. math::
+            \\left(\partial \\text{Exp}(f)\\right)(h) = \\text{Exp}(f)h
+
+        Its adjoint is given by
+
+        .. math::
+             \\left[\partial \\text{Exp}(f)\\right]^*(g) =
+             \\overline{\\text{Exp}(f)}g
+        """
         exp_f = np.exp(f)
         op = self
 
