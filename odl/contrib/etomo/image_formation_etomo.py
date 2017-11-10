@@ -104,20 +104,53 @@ def optics_imperfections(xi, **kwargs):
 
 def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
                           abs_phase_ratio=1, obj_magnitude=1,
-                          rescale_factor=1, **kwargs):
+                          rescale_factor=1):
+    """Return image-formation operator.
 
+    Parameters
+    ----------
+    domain : `DiscreteLp`
+        Domain of this operator. In the implementation of the TEM forward model
+        this will be the range of the Radon transform.
+    wave_number : `float`
+        The wave number of the incident electrons.
+    spherical_abe : `float`
+        Third-order spherical abberation of the TEM principal lens.
+    defocus : `float`
+        The defocus of the TEM principal lens.
+    abs_phase_ratio : `float`, optional
+        The imaginary part of the scattering potential (i.e. the part of the
+        potential accounting for absorption) is assumed to be this constant
+        times the real part of the scattering potential (i.e. the part of
+        the potential accounting for phase-shifts).
+    obj_magnitude : `float`, optional
+        The object is multiplied with this constant.
+    rescale_factor : `float`, optional
+        The object has been magnified with this constant.
+
+    Returns
+    ----------
+        imageFormationOp : `operator`
+
+    Notes
+    ----------
+    The image-formation operator models the optics and the detector of the
+    electron microscope.
+    """
     ratio_op = ConstantPhaseAbsRatio(domain, abs_phase_ratio=abs_phase_ratio,
                                      magnitude_factor=obj_magnitude)
 
     # Create (pointwise) exponential operator.
     exp_op = ExpOperator(ratio_op.range)
 
-    # Get axes on which to perform FT.
+    # Get axes on which to perform FT, i.e. the axes corresponding to the
+    # detector.
     ft_axes = list(range(1, domain.ndim))
 
     # Create (partial) FT
     ft_ctf = odl.trafos.FourierTransform(exp_op.range, axes=ft_axes)
 
+    # Create optics imperfections function.
     optics_imperf = ft_ctf.range.element(optics_imperfections,
                                          wave_number=wave_number,
                                          spherical_abe=spherical_abe,
@@ -129,6 +162,8 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
 
     # The optics operator is a multiplication in frequency-space
     optics_op = ft_ctf.inverse * ctf * ft_ctf
+
+    # Create intensity operator
     intens_op = IntensityOperator(optics_op.range)
 
     # optics_op_cst = 2*np.pi /(magnification*(2*np.pi)**2)
