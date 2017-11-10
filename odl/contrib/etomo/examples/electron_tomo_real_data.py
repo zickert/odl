@@ -126,11 +126,7 @@ get_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
 get_data = etomo.make_data_blocks(data_renormalized, kaczmarz_plan)
 
 # Optional nonnegativity-constraint
-nonneg_constraint = odl.solvers.IndicatorNonnegativity(reco_space).proximal(1)
-
-
-def nonneg_projection(x):
-    x[:] = nonneg_constraint(x)
+nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
 
 
 reco = reco_space.zero()
