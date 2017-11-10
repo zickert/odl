@@ -179,7 +179,7 @@ ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 
 F_post = etomo.make_imageFormationOp(ray_trafo_block.range, wave_number,
                                      spherical_abe, defocus,
-                                     rescale_ctf_factor=rescale_factor,
+                                     rescale_factor=rescale_factor,
                                      obj_magnitude=obj_magnitude,
                                      abs_phase_ratio=abs_phase_ratio)
 
@@ -190,11 +190,7 @@ get_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
 get_data = etomo.make_data_blocks(data_renormalized, kaczmarz_plan)
 
 # Optional nonnegativity-constraint
-nonneg_constraint = odl.solvers.IndicatorNonnegativity(reco_space).proximal(1)
-
-
-def nonneg_projection(x):
-    x[:] = nonneg_constraint(x)
+nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
 
 
 reco = reco_space.zero()
