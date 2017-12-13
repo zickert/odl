@@ -213,7 +213,7 @@ etomo.kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
 #etomo.plot_3d_ortho_slices(phantom)
 #etomo.plot_3d_ortho_slices(reco)
 
-dose_25000_reco_fig = reco.show()
+dose_25000_reco_fig = reco.show(coords = [None,None,0])
 dose_25000_reco_fig.savefig('dose_25000_reco')
 
 # %%
