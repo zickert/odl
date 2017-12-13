@@ -5,7 +5,10 @@ import numpy as np
 import os
 import odl
 from odl.contrib import etomo
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt 
+
 from odl.contrib.mrc import FileReaderMRC
 
 # Read phantom and data.
