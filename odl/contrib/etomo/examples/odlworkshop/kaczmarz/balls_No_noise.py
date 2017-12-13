@@ -10,8 +10,8 @@ from odl.contrib import etomo
 from odl.contrib.mrc import FileReaderMRC
 
 # Read phantom and data.
-dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/One_particle_RNA/odlworkshop/No_noise')
-file_path_phantom = os.path.join(dir_path, 'rna_phantom.mrc')
+dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Balls/odlworkshop/No_noise')
+file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
 file_path_tiltseries = os.path.join(dir_path, 'tiltseries.mrc')
 
 with FileReaderMRC(file_path_phantom) as phantom_reader:
@@ -58,18 +58,21 @@ defocus = 3e-6  # m
 det_size = 16e-6  # m
 
 # Reconstruction space: discretized functions on a cuboid
-reco_space = odl.uniform_discr(min_pt=[-rescale_factor*95e-9/4,
-                                       -rescale_factor*100e-9/4,
-                                       -rescale_factor*80e-9/4],
-                               max_pt=[rescale_factor*95e-9/4,
-                                       rescale_factor*100e-9/4,
-                                       rescale_factor*80e-9/4],
-                               shape=[95, 100, 80], dtype='float64')
+reco_space = odl.uniform_discr(min_pt=[-rescale_factor*210e-9/4,
+                                       -rescale_factor*250e-9/4,
+                                       -rescale_factor*40e-9/4],
+                               max_pt=[rescale_factor*210e-9/4,
+                                       rescale_factor*250e-9/4,
+                                       rescale_factor*40e-9/4],
+                               shape=[210, 250, 40], dtype='float64')
 # Make a 3d single-axis parallel beam geometry with flat detector
 # Angles: uniformly spaced, n = 180, min = 0, max = pi
 angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, num_angles)
-detector_partition = odl.uniform_partition([-rescale_factor*det_size/M * 200/2] * 2,
-                                           [rescale_factor*det_size/M * 200/2] * 2, [200] * 2)
+detector_partition = odl.uniform_partition([-rescale_factor*det_size/M * 210/2,
+                                            -rescale_factor*det_size/M * 250/2],
+                                           [rescale_factor*det_size/M * 200/2,
+                                            rescale_factor*det_size/M * 250/2],
+                                            [210, 250])
 
 # The x-axis is the tilt-axis.
 geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition,
@@ -122,8 +125,8 @@ data = etomo.buffer_correction(data)
 data_from_this_model = etomo.buffer_correction(data_from_this_model)
 
 # Plot corrected data
-data_from_this_model.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
-data.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
+data_from_this_model.show(coords=[0, None, None])
+data.show(coords=[0, None, None])
 
 # Renormalize data so that it matches "data_from_this_model"
 data *= np.mean(data_from_this_model.asarray())
@@ -145,7 +148,10 @@ F_post = etomo.make_imageFormationOp(ray_trafo_block.range, wave_number,
                                      obj_magnitude=obj_magnitude,
                                      abs_phase_ratio=abs_phase_ratio)
 
-F_pre = odl.MultiplyOperator(mask, reco_space, reco_space)
+#F_pre = odl.MultiplyOperator(mask, reco_space, reco_space)
+# we skip the mask for the Balls phantom
+F_pre = odl.IdentityOperator(reco_space)
+
 
 get_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
                               Op_post=F_post)
@@ -171,14 +177,14 @@ etomo.kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
 # etomo.plot_3d_ortho_slices(reco)
 
 # Save planes of reco (orthogonal to x,y and z axes)
-nn_reco_fig_x = reco.show(title='rna_no_noise_reco_x',
+nn_reco_fig_x = reco.show(title='balls_no_noise_reco_x',
                           coords=[0, None, None])
-nn_reco_fig_x.savefig('rna_no_noise_reco_x')
+nn_reco_fig_x.savefig('balls_no_noise_reco_x')
 
-nn_reco_fig_y = reco.show(title='rna_no_noise_reco_y',
+nn_reco_fig_y = reco.show(title='balls_no_noise_reco_y',
                           coords=[None, 0, None])
-nn_reco_fig_y.savefig('rna_no_noise_reco_y')
+nn_reco_fig_y.savefig('balls_no_noise_reco_y')
 
-nn_reco_fig_z = reco.show(title='rna_no_noise_reco_z',
+nn_reco_fig_z = reco.show(title='balls_no_noise_reco_z',
                           coords=[None, None, 0])
-nn_reco_fig_z.savefig('rna_no_noise_reco_z')
+nn_reco_fig_z.savefig('balls_no_noise_reco_z')
