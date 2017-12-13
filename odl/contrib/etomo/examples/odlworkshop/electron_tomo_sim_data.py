@@ -12,7 +12,7 @@ from odl.contrib import etomo
 from odl.contrib.mrc import FileReaderMRC
 
 # Read phantom and data.
-dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/One_particle_RNA/odlworkshop/dose_100000')
+dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/One_particle_RNA/odlworkshop/dose_5000')
 file_path_phantom = os.path.join(dir_path, 'rna_phantom.mrc')
 file_path_phantom_abs = os.path.join(dir_path, 'rna_phantom_abs.mrc')
 file_path_map = os.path.join(dir_path, '1I3Q_map.mrc')
@@ -213,8 +213,8 @@ etomo.kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
 #etomo.plot_3d_ortho_slices(phantom)
 #etomo.plot_3d_ortho_slices(reco)
 
-dose_100000_reco_fig = reco.show(coords = [None,None,0])
-dose_100000_reco_fig.savefig('dose_100000_reco')
+dose_5000_reco_fig = reco.show(coords = [None,None,0])
+dose_5000_reco_fig.savefig('dose_5000_reco')
 
 # %%
 
