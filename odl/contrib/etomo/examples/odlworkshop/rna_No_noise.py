@@ -10,7 +10,7 @@ from odl.contrib import etomo
 from odl.contrib.mrc import FileReaderMRC
 
 # Read phantom and data.
-dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/One_particle_RNA/odlworkshop/dose_5000')
+dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/One_particle_RNA/odlworkshop/No_noise')
 file_path_phantom = os.path.join(dir_path, 'rna_phantom.mrc')
 file_path_tiltseries = os.path.join(dir_path, 'tiltseries.mrc')
 
@@ -36,8 +36,8 @@ sigma = e_mass * e_charge / (wave_number * planck_bar ** 2)
 abs_phase_ratio = 0.1
 magic_factor = 1
 obj_magnitude = magic_factor * sigma / rescale_factor
-regpar = 2e3
-gamma_H1 = 0.9
+regpar = 1e-2
+gamma_H1 = 0.0
 num_angles = 61
 num_angles_per_block = 1
 num_cycles = 3
@@ -122,8 +122,8 @@ data = etomo.buffer_correction(data)
 data_from_this_model = etomo.buffer_correction(data_from_this_model)
 
 # Plot corrected data
-# data_from_this_model.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
-# data.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
+data_from_this_model.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
+data.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
 
 # Renormalize data so that it matches "data_from_this_model"
 data *= np.mean(data_from_this_model.asarray())
@@ -171,14 +171,14 @@ etomo.kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
 # etomo.plot_3d_ortho_slices(reco)
 
 # Save planes of reco (orthogonal to x,y and z axes)
-dose_5000_reco_fig_x = reco.show(title='rna_dose_5000_reco_x',
-                                 coords=[0, None, None])
-dose_5000_reco_fig_x.savefig('rna_dose_5000_reco_x')
+nn_reco_fig_x = reco.show(title='rna_no_noise_reco_x',
+                          coords=[0, None, None])
+nn_reco_fig_x.savefig('rna_no_noise_reco_x')
 
-dose_5000_reco_fig_y = reco.show(title='rna_dose_5000_reco_y',
-                                 coords=[None, 0, None])
-dose_5000_reco_fig_y.savefig('rna_dose_5000_reco_y')
+nn_reco_fig_y = reco.show(title='rna_no_noise_reco_y',
+                          coords=[None, 0, None])
+nn_reco_fig_y.savefig('rna_no_noise_reco_y')
 
-dose_5000_reco_fig_z = reco.show(title='rna_dose_5000_reco_z',
-                                 coords=[None, None, 0])
-dose_5000_reco_fig_z.savefig('rna_dose_5000_reco_z')
+nn_reco_fig_z = reco.show(title='rna_no_noise_reco_z',
+                          coords=[None, None, 0])
+nn_reco_fig_z.savefig('rna_no_noise_reco_z')

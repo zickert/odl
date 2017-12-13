@@ -10,7 +10,7 @@ from odl.contrib import etomo
 from odl.contrib.mrc import FileReaderMRC
 
 # Read phantom and data.
-dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/One_particle_RNA/odlworkshop/dose_5000')
+dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/One_particle_RNA/odlworkshop/dose_100000')
 file_path_phantom = os.path.join(dir_path, 'rna_phantom.mrc')
 file_path_tiltseries = os.path.join(dir_path, 'tiltseries.mrc')
 
@@ -171,14 +171,14 @@ etomo.kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
 # etomo.plot_3d_ortho_slices(reco)
 
 # Save planes of reco (orthogonal to x,y and z axes)
-dose_5000_reco_fig_x = reco.show(title='rna_dose_5000_reco_x',
-                                 coords=[0, None, None])
-dose_5000_reco_fig_x.savefig('rna_dose_5000_reco_x')
+dose_100000_reco_fig_x = reco.show(title='rna_dose_100000_reco_x',
+                                   coords=[0, None, None])
+dose_100000_reco_fig_x.savefig('rna_dose_100000_reco_x')
 
-dose_5000_reco_fig_y = reco.show(title='rna_dose_5000_reco_y',
-                                 coords=[None, 0, None])
-dose_5000_reco_fig_y.savefig('rna_dose_5000_reco_y')
+dose_100000_reco_fig_y = reco.show(title='rna_dose_100000_reco_y',
+                                   coords=[None, 0, None])
+dose_100000_reco_fig_y.savefig('rna_dose_100000_reco_y')
 
-dose_5000_reco_fig_z = reco.show(title='rna_dose_5000_reco_z',
-                                 coords=[None, None, 0])
-dose_5000_reco_fig_z.savefig('rna_dose_5000_reco_z')
+dose_100000_reco_fig_z = reco.show(title='rna_dose_100000_reco_z',
+                                   coords=[None, None, 0])
+dose_100000_reco_fig_z.savefig('rna_dose_100000_reco_z')
