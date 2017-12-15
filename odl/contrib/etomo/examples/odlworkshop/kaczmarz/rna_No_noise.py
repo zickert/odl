@@ -86,7 +86,7 @@ ray_trafo = etomo.BlockRayTransform(reco_space, geometry)
 imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range, 
                                                 wave_number, spherical_abe,
                                                 defocus,
-                                                rescale_factor=rescale_factor,
+                                                rescale_factor=0.5*rescale_factor,
                                                 obj_magnitude=obj_magnitude,
                                                 abs_phase_ratio=abs_phase_ratio)
 
@@ -121,12 +121,30 @@ data = forward_op.range.element(np.transpose(data_asarray, (2, 0, 1)))
 data = etomo.buffer_correction(data)
 data_from_this_model = etomo.buffer_correction(data_from_this_model)
 
+
 # Plot corrected data
 data_from_this_model.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
 data.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
 
 # Renormalize data so that it matches "data_from_this_model"
 data *= np.mean(data_from_this_model.asarray())
+
+
+# Compare with affine approximation
+#aff_apprx = forward_op(reco_space.zero()) + forward_op.derivative(reco_space.zero())
+#aff_apprx_data = aff_apprx(phantom)
+#aff_apprx_data.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
+#non_linearity = data_from_this_model - aff_apprx_data
+#non_linearity.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
+#forward_op(reco_space.zero()).show()
+
+
+# Make a tiny spherical mask
+# Define a spherical mask to implement support constraint.
+delta = reco_space.element(etomo.spherical_mask,
+                          radius=rescale_factor * 5.0e-10)
+
+forward_op(delta).show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
 
 # %% RECONSTRUCTION
 reco = ray_trafo.domain.zero()
@@ -141,7 +159,7 @@ ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 
 F_post = etomo.make_imageFormationOp(ray_trafo_block.range, wave_number,
                                      spherical_abe, defocus,
-                                     rescale_factor=rescale_factor,
+                                     rescale_factor=0.5*rescale_factor,
                                      obj_magnitude=obj_magnitude,
                                      abs_phase_ratio=abs_phase_ratio)
 
