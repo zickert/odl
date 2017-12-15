@@ -74,6 +74,15 @@ data = forward_op(phantom)
 noise = odl.phantom.white_noise(data.space)
 data += (noise_lvl * (data.space.one()-data).norm() / noise.norm()) * noise
 
+# Compare with affine approximation
+data.show()
+aff_apprx = forward_op(reco_space.zero()) + forward_op.derivative(reco_space.zero())
+aff_apprx_data = aff_apprx(phantom)
+aff_apprx_data.show()
+non_linearity = data - aff_apprx_data
+non_linearity.show()
+forward_op(reco_space.zero()).show()
+
 # %%
 
 # Choose a starting point
