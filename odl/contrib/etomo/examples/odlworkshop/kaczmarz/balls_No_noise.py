@@ -188,3 +188,14 @@ nn_reco_fig_y.savefig('balls_no_noise_reco_y')
 nn_reco_fig_z = reco.show(title='balls_no_noise_reco_z',
                           coords=[None, None, 0])
 nn_reco_fig_z.savefig('balls_no_noise_reco_z')
+
+
+#%% 
+reco = ray_trafo.domain.zero()
+callback = (odl.solvers.CallbackPrintIteration() &
+            odl.solvers.CallbackShow())
+
+#Landweber iterations
+nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
+
+odl.solvers.landweber(forward_op, reco, data, 1000, omega=3e1, callback=callback,projection=nonneg_projection)

@@ -77,6 +77,14 @@ data = forward_op(phantom)
 noise = odl.phantom.white_noise(data.space)
 data += (noise_lvl * (forward_op(reco_space.zero())-data).norm() / noise.norm()) * noise
 
+# Make a tiny spherical mask
+# Define a spherical mask to implement support constraint.
+delta = reco_space.element(etomo.spherical_mask,
+                          radius=rescale_factor * 5.0e-10)
+
+forward_op(delta).show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
+
+
 # %%
 
 # Choose a starting point

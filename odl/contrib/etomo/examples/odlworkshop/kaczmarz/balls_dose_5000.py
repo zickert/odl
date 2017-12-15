@@ -131,6 +131,8 @@ data.show(coords=[0, None, None])
 # Renormalize data so that it matches "data_from_this_model"
 data *= np.mean(data_from_this_model.asarray())
 
+#data = data_from_this_model
+
 # %% RECONSTRUCTION
 reco = ray_trafo.domain.zero()
 callback = (odl.solvers.CallbackPrintIteration() &
@@ -188,3 +190,14 @@ dose_5000_reco_fig_y.savefig('balls_dose_5000_reco_y')
 dose_5000_reco_fig_z = reco.show(title='balls_dose_5000_reco_z',
                                  coords=[None, None, 0])
 dose_5000_reco_fig_z.savefig('balls_dose_5000_reco_z')
+
+
+#%% 
+reco = ray_trafo.domain.zero()
+callback = (odl.solvers.CallbackPrintIteration() &
+            odl.solvers.CallbackShow())
+
+#Landweber iterations
+nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
+
+odl.solvers.landweber(forward_op, reco, data, 1000, omega=3e1, callback=callback,projection=nonneg_projection)

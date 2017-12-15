@@ -8,7 +8,7 @@ from odl.contrib import etomo
 from odl.contrib.mrc import FileReaderMRC
 
 # Read phantom and data.
-dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Balls/odlworkshop/No_noise')
+dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Balls/odlworkshop/gain_5000')
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
 file_path_tiltseries = os.path.join(dir_path, 'tiltseries.mrc')
 
@@ -150,7 +150,7 @@ l2_norm = odl.solvers.L2NormSquared(lin_op.range).translated(data)
 reg_param = 0.0015
 
 # Isotropic TV-regularization i.e. the l1-norm
-l1_norm = reg_param * odl.solvers.Huber(gradient.range,0.1)
+l1_norm = reg_param * odl.solvers.GroupL1Norm(gradient.range)
 
 # Combine functionals, order must correspond to the operator K
 f = odl.solvers.SeparableSum(l2_norm, l1_norm)
