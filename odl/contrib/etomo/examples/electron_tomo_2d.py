@@ -127,7 +127,13 @@ etomo.kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
 
 # %%
 
-#reco = reco_space.zero()
+reco = reco_space.zero()
+# Optional: pass callback objects to solver
+callback = (odl.solvers.CallbackPrintIteration() &
+            odl.solvers.CallbackShow())
+# Optional nonnegativity-constraint
+nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
+
 #etomo.kaczmarz_reco_method(get_op, reco, get_data, len(kaczmarz_plan),
 #                     regpar*obj_magnitude ** 2, callback=callback,
 #                     num_cycles=num_cycles, projection=nonneg_projection)
@@ -144,8 +150,8 @@ etomo.kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
 #odl.solvers.conjugate_gradient_nonlinear(func, reco, callback=callback)#, line_search=1e0, callback=callback,
 #                                         #nreset=50)
 #                                        
-# Landweber iterations
-#odl.solvers.landweber(forward_op, reco, data, 1000, omega=3e1, callback=callback)
+#Landweber iterations
+odl.solvers.landweber(forward_op, reco, data, 1000, omega=3e1, callback=callback,projection=nonneg_projection)
 
 
 #if __name__ == '__main__':
@@ -162,3 +168,5 @@ etomo.kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
 #    ip2 = Ax_adj.inner(y_adj)
 #
 #    assert pytest.approx(ip1.real,rel=5e-2) == ip2.real
+
+
