@@ -86,7 +86,7 @@ ray_trafo = etomo.BlockRayTransform(reco_space, geometry)
 imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range, 
                                                 wave_number, spherical_abe,
                                                 defocus,
-                                                rescale_factor=0.5*rescale_factor,
+                                                rescale_factor=rescale_factor,
                                                 obj_magnitude=obj_magnitude,
                                                 abs_phase_ratio=abs_phase_ratio)
 
@@ -159,7 +159,7 @@ ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 
 F_post = etomo.make_imageFormationOp(ray_trafo_block.range, wave_number,
                                      spherical_abe, defocus,
-                                     rescale_factor=0.5*rescale_factor,
+                                     rescale_factor=rescale_factor,
                                      obj_magnitude=obj_magnitude,
                                      abs_phase_ratio=abs_phase_ratio)
 
