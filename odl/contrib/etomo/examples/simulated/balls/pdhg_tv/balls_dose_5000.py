@@ -8,7 +8,7 @@ from odl.contrib import etomo
 from odl.contrib.mrc import FileReaderMRC
 
 # Read phantom and data.
-dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Balls/odlworkshop/gain_5000')
+dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Simulated/Balls/gain_5000')
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
 file_path_tiltseries = os.path.join(dir_path, 'tiltseries.mrc')
 
@@ -107,15 +107,6 @@ data_from_this_model = forward_op(phantom)
 
 # Make  a ODL discretized function of the MRC data
 data = forward_op.range.element(np.transpose(data_asarray, (2, 0, 1)))
-
-# Plot phantom and data
-# phantom.show(coords=[0, None, None])
-# phantom_abs.show(coords=[0, None, None])
-# data.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
-
-# plt.imshow(true_data, cmap='gray')
-# plt.colorbar()
-# true_data.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
 
 # Correct for diffrent pathlenght of the electrons through the buffer
 data = etomo.buffer_correction(data)

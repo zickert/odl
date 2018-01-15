@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from odl.contrib.mrc import FileReaderMRC
 
 # Read data
-dir_path = os.path.abspath('/home/zickert/TEM_reco_project')
+dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Experimental')
 file_path_data = os.path.join(dir_path, 'region2.mrc')
 
 with FileReaderMRC(file_path_data) as reader:
@@ -26,8 +26,8 @@ wave_length = 0.0025e-9  # m
 wave_number = 2 * np.pi / wave_length
 sigma = e_mass * e_charge / (wave_number * planck_bar ** 2)
 
-abs_phase_ratio = 0.5
-obj_magnitude = 0.5 * sigma / rescale_factor
+abs_phase_ratio = 0.1
+obj_magnitude = sigma / rescale_factor
 regpar = 3e3
 num_angles = 81
 num_angles_per_block = 1
@@ -92,11 +92,11 @@ forward_op = imageFormation_op * ray_trafo * mask
 data = forward_op.range.element(np.transpose(data - detector_zero_level,
                                              (2, 0, 1)))
 
-data.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
+data.show(coords=[0, None, None])
 
 data_bc = etomo.buffer_correction(data)
 
-data_bc.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
+data_bc.show(coords=[0, None, None])
 
 data_renormalized = data_bc * np.mean(imageFormation_op(imageFormation_op.domain.zero()).asarray())
 
