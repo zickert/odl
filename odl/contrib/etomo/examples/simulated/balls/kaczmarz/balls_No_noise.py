@@ -10,7 +10,7 @@ from odl.contrib import etomo
 from odl.contrib.mrc import FileReaderMRC
 
 # Read phantom and data.
-dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Balls/odlworkshop/No_noise')
+dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Simulated/Balls/No_noise')
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
 file_path_tiltseries = os.path.join(dir_path, 'tiltseries.mrc')
 
