@@ -22,7 +22,7 @@ rescale_factor = 1e9
 e_mass = 9.11e-31  # kg
 e_charge = 1.602e-19  # C
 planck_bar = 1.059571e-34  # Js/rad
-wave_length = 0.0025e-9  # m
+wave_length = 0.00196e-9 # m
 wave_number = 2 * np.pi / wave_length
 sigma = e_mass * e_charge / (wave_number * planck_bar ** 2)
 

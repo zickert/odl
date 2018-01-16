@@ -13,22 +13,11 @@ from odl.contrib.mrc import FileReaderMRC
 dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Simulated/Balls/No_noise')
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
 file_path_tiltseries = os.path.join(dir_path, 'tiltseries.mrc')
-file_path_tiltseries_perfect_detector = os.path.join(dir_path, 'tiltseries_perfect_detector.mrc')
-file_path_tiltseries_perfect_dqe = os.path.join(dir_path, 'tiltseries_perfect_dqe.mrc')
-file_path_tiltseries_both_perfect = os.path.join(dir_path, 'tiltseries_perfect_detector_perfect_dqe.mrc')
 
 with FileReaderMRC(file_path_phantom) as phantom_reader:
     phantom_header, phantom_asarray = phantom_reader.read()
 with FileReaderMRC(file_path_tiltseries) as tiltseries_reader:
     tiltseries_header, data_asarray = tiltseries_reader.read()
-with FileReaderMRC(file_path_tiltseries_perfect_detector) as tiltseries_perfect_detector_reader:
-    tiltseries_perf_det_header, data_perf_det_asarray = tiltseries_perfect_detector_reader.read()
-with FileReaderMRC(file_path_tiltseries_perfect_dqe) as tiltseries_perfect_dqe_reader:
-    tiltseries_perf_dqe_header, data_perf_dqe_asarray = tiltseries_perfect_dqe_reader.read()
-with FileReaderMRC(file_path_tiltseries_both_perfect) as tiltseries_both_perfect_reader:
-    tiltseries_both_perf_header, data_both_perf_asarray = tiltseries_both_perfect_reader.read()
-
-data_asarray = data_both_perf_asarray
 
 # The reconstruction space will be rescaled according to rescale_factor in
 # order to avoid numerical issues related to having a very small reco space.
@@ -39,15 +28,14 @@ e_mass = 9.11e-31  # kg
 e_charge = 1.602e-19  # C
 planck_bar = 1.059571e-34  # Js/rad
 
-wave_length = 0.00251e-9  # m
+wave_length = 0.0025e-9  # m
 wave_number = 2 * np.pi / wave_length
 
 sigma = e_mass * e_charge / (wave_number * planck_bar ** 2)
 
 abs_phase_ratio = 0.1
-obj_magnitude = sigma / rescale_factor
-regpar = 1e-3
-gamma_H1 = 0.0
+magic_factor = 1
+obj_magnitude = magic_factor * sigma / rescale_factor
 num_angles = 61
 num_angles_per_block = 1
 num_cycles = 3
@@ -107,86 +95,32 @@ imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
 forward_op = imageFormation_op * ray_trafo
 phantom = reco_space.element(phantom_asarray)
 
-# remove background, only for generating data_from_this_model 
+# remove background
 bg_cst = np.min(phantom)
 phantom -= bg_cst
 
 # Create data by calling the forward operator on the phantom
 data_from_this_model = forward_op(phantom)
 
-
-# Make a ODL discretized function of the MRC data
+# Make  a ODL discretized function of the MRC data
 data = forward_op.range.element(np.transpose(data_asarray, (2, 0, 1)))
-data.show(coords=[0, None, None])
+
 # Correct for diffrent pathlenght of the electrons through the buffer
-
-data_from_this_model.show(coords = [0,None,None])
-
-data = etomo.buffer_correction(data, coords = [[0, 0.1],[0, 0.1]])
-data_from_this_model = etomo.buffer_correction(data_from_this_model, coords = [[0, 0.1],[0, 0.1]])
+data = etomo.buffer_correction(data)
+data_from_this_model = etomo.buffer_correction(data_from_this_model)
 
 # Plot corrected data
-#data_from_this_model.show(coords=[0, None, None])
+data_from_this_model.show(coords=[0, None, None])
 data.show(coords=[0, None, None])
-
-
-data_diff = data-data_from_this_model
-data_div = data/data_from_this_model
-
-#print("relative data-match error (w.r.t. contrast to bg):", data_diff.norm()/(data-1).norm())
-
-data_diff.show(coords=[0, None, None]) 
-#data_div.show(coords=[0, None, None]) 
 
 # Renormalize data so that it matches "data_from_this_model"
 data *= np.mean(data_from_this_model.asarray())
-
-# %% RECONSTRUCTION
-reco = ray_trafo.domain.zero()
-callback = (odl.solvers.CallbackPrintIteration() &
-            odl.solvers.CallbackShow())
-
-kaczmarz_plan = etomo.make_kaczmarz_plan(num_angles,
-                                         block_length=num_angles_per_block,
-                                         method='random')
-
-ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
-
-F_post = etomo.make_imageFormationOp(ray_trafo_block.range, wave_number,
-                                     spherical_abe, defocus,
-                                     rescale_factor=rescale_factor,
-                                     obj_magnitude=obj_magnitude,
-                                     abs_phase_ratio=abs_phase_ratio)
-
-F_pre = odl.IdentityOperator(reco_space)
-
-
-get_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
-                              Op_post=F_post)
-get_data = etomo.make_data_blocks(data, kaczmarz_plan)
-
-# Optional nonnegativity-constraint
-nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
-
-
-reco = reco_space.zero()
-reco = 0.9 * phantom
-
-get_proj_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
-                                   Op_post=None)
-
-etomo.kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
-                           regpar*obj_magnitude ** 2,
-                           imageFormationOp=F_post, gamma_H1=gamma_H1,
-                           niter_CG=30, callback=callback,
-                           num_cycles=num_cycles, projection=nonneg_projection)
-
 
 # Plot results
 # etomo.plot_3d_ortho_slices(phantom)
 # etomo.plot_3d_ortho_slices(reco)
 
-# Save planes of reco (orthogonal to x,y and z axes)
+## Save planes of reco (orthogonal to x,y and z axes)
 #nn_reco_fig_x = reco.show(title='balls_no_noise_reco_x',
 #                          coords=[0, None, None])
 #nn_reco_fig_x.savefig('balls_no_noise_reco_x')
@@ -198,3 +132,15 @@ etomo.kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
 #nn_reco_fig_z = reco.show(title='balls_no_noise_reco_z',
 #                          coords=[None, None, 0])
 #nn_reco_fig_z.savefig('balls_no_noise_reco_z')
+
+
+#%% 
+reco = ray_trafo.domain.zero()
+reco = phantom
+callback = (odl.solvers.CallbackPrintIteration() &
+            odl.solvers.CallbackShow())
+
+#Landweber iterations
+nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
+
+odl.solvers.landweber(forward_op, reco, data, 1000, omega=3e1, callback=callback,projection=nonneg_projection)

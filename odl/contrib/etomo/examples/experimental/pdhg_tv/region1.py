@@ -108,61 +108,55 @@ data_bc.show(coords=[0, None, None])
 data_renormalized = data_bc * np.mean(imageFormation_op(imageFormation_op.domain.zero()).asarray())
 
 
-# %% TRY RECONSTRUCTION
 
-callback = (odl.solvers.CallbackPrintIteration() &
-            odl.solvers.CallbackShow())
+#PDHG
+####################
+# --- Set up the inverse problem --- #
 
+# Initialize gradient operator
+gradient = odl.Gradient(reco_space)
 
-kaczmarz_plan = etomo.make_kaczmarz_plan(num_angles,
-                                         block_length=num_angles_per_block,
-                                         method='random')
+# Column vector of two operators
+op = odl.BroadcastOperator(forward_op, gradient)
 
-ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
+# Do not use the g functional, set it to zero.
+g = odl.solvers.ZeroFunctional(op.domain)
 
-F_post = etomo.make_imageFormationOp(ray_trafo_block.range, wave_number,
-                                     spherical_abe, defocus,
-                                     rescale_factor=rescale_factor,
-                                     obj_magnitude=obj_magnitude,
-                                     abs_phase_ratio=abs_phase_ratio)
+# Create functionals for the dual variable
 
-F_pre = odl.MultiplyOperator(mask, reco_space, reco_space)
-
-get_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
-                              Op_post=F_post)
-get_data = etomo.make_data_blocks(data_renormalized, kaczmarz_plan)
-
-# Optional nonnegativity-constraint
-nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
-
-
-reco = reco_space.zero()
-get_proj_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
-                                   Op_post=None)
-
-etomo.kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
-                           regpar*obj_magnitude ** 2,
-                           imageFormationOp=F_post, gamma_H1=0.9, niter_CG=30,
-                           callback=callback, num_cycles=num_cycles,
-                           projection=nonneg_projection)
-
-
-# Plot results
-etomo.plot_3d_ortho_slices(reco)
+# l2-squared data matching
+l2_norm = odl.solvers.L2NormSquared(forward_op.range).translated(data_renormalized)
 
 #
-## %%
-#for angle_idx in range(num_angles):
-#    proj_op = ray_trafo.get_sub_operator([angle_idx])
-#    proj = proj_op(proj_op.domain.one())
-#    center = 0.5*(proj.space.min_pt[0] + proj.space.max_pt[0])
-#    proj.show(coords=[center, None, None])
-#
-## %%
-#for angle_idx in range(num_angles):
-#    image = proj_op.range.element(data_renormalized.asarray()[angle_idx, :, :])
-#    center = 0.5*(image.space.min_pt[0] + image.space.max_pt[0])
-#    image.show(coords=[center, None, None])
-#    # plt.figure(); plt.imshow(image, vmin = 0.9, vmax = 1.0); plt.colorbar();
-## -*- coding: utf-8 -*-
+reg_param = 500
+
+# Isotropic TV-regularization i.e. the l1-norm
+l1_norm = reg_param * odl.solvers.GroupL1Norm(gradient.range)
+
+# Combine functionals, order must correspond to the operator K
+f = odl.solvers.SeparableSum(l2_norm, l1_norm)
+
+# --- Select solver parameters and solve using PDHG --- #
+
+# Estimated operator norm, add 10 percent to ensure ||K||_2^2 * sigma * tau < 1
+op_norm = 1.1 * 7.4465020879509245 # 1.1 * odl.power_method_opnorm(op)
+
+niter = 200  # Number of iterations
+tau = 1.0 / op_norm  # Step size for the primal variable
+sigma = 1.0 / op_norm  # Step size for the dual variable
+
+
+
+# Choose a starting point
+x = reco_space.zero()
+
+# define callback 
+callback = (odl.solvers.CallbackPrintIteration(step=10) &
+            odl.solvers.CallbackShow(step=10))
+# Run the algorithm
+odl.solvers.pdhg(x, f, g, op, tau=tau, sigma=sigma, niter=niter,
+                 callback=callback)
+
+
+# -*- coding: utf-8 -*-
 
