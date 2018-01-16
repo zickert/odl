@@ -8,7 +8,7 @@ from odl.contrib import etomo
 from odl.contrib.mrc import FileReaderMRC
 
 # Read phantom and data.
-dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Simulated/Balls/gain_5000')
+dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Simulated/Balls/No_noise')
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
 file_path_tiltseries = os.path.join(dir_path, 'tiltseries.mrc')
 
@@ -116,6 +116,7 @@ data.show(coords=[0, None, None])
 # Renormalize data so that it matches "data_from_this_model"
 data *= np.mean(data_from_this_model.asarray())
 
+
 #PDHG
 ####################
 # --- Set up the inverse problem --- #
@@ -135,7 +136,7 @@ g = odl.solvers.ZeroFunctional(op.domain)
 l2_norm = odl.solvers.L2NormSquared(forward_op.range).translated(data)
 
 #
-reg_param = 1000
+reg_param = 0.01
 
 # Isotropic TV-regularization i.e. the l1-norm
 l1_norm = reg_param * odl.solvers.GroupL1Norm(gradient.range)
@@ -158,8 +159,8 @@ sigma = 1.0 / op_norm  # Step size for the dual variable
 x = reco_space.zero()
 
 # define callback 
-callback = (odl.solvers.CallbackPrintIteration(step=200) &
-            odl.solvers.CallbackShow(step=200))
+callback = (odl.solvers.CallbackPrintIteration(step=5) &
+            odl.solvers.CallbackShow(step=5))
 # Run the algorithm
 odl.solvers.pdhg(x, f, g, op, tau=tau, sigma=sigma, niter=niter,
                  callback=callback)

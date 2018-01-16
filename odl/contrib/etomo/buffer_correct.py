@@ -34,8 +34,8 @@ def buffer_correction(data, coords=[[0, 0.25], [0, 0.25]]):
                       round(dim_y*coords[1][0]):round(dim_y*coords[1][1])]
 
     bg_slice = bg[round(dim_t/2),:,:]
-    import matplotlib.pyplot as plt
-    plt.imshow(bg_slice)
+#    import matplotlib.pyplot as plt
+#    plt.imshow(bg_slice)
 
     # Compute mean of background for all tomographic acquisition angles
     bg_mean = np.mean(bg, (1, 2))
