@@ -101,7 +101,9 @@ imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
                                                 defocus,
                                                 rescale_factor=rescale_factor,
                                                 obj_magnitude=obj_magnitude,
-                                                abs_phase_ratio=abs_phase_ratio)
+                                                abs_phase_ratio=abs_phase_ratio,
+                                                aper_rad=aper_rad,
+                                                focal_length=focal_length)
 
 # Define forward operator as a composition
 forward_op = imageFormation_op * ray_trafo
@@ -123,7 +125,7 @@ data.show(coords=[0, None, None])
 data_from_this_model.show(coords = [0,None,None])
 
 data = etomo.buffer_correction(data, coords = [[0, 0.1],[0, 0.1]])
-data_from_this_model = etomo.buffer_correction(data_from_this_model, coords = [[0, 0.1],[0, 0.1]])
+#data_from_this_model = etomo.buffer_correction(data_from_this_model, coords = [[0, 0.1],[0, 0.1]])
 
 # Plot corrected data
 #data_from_this_model.show(coords=[0, None, None])
@@ -156,7 +158,9 @@ F_post = etomo.make_imageFormationOp(ray_trafo_block.range, wave_number,
                                      spherical_abe, defocus,
                                      rescale_factor=rescale_factor,
                                      obj_magnitude=obj_magnitude,
-                                     abs_phase_ratio=abs_phase_ratio)
+                                     abs_phase_ratio=abs_phase_ratio,
+                                     aper_rad=aper_rad,
+                                     focal_length=focal_length)
 
 F_pre = odl.IdentityOperator(reco_space)
 
@@ -170,7 +174,7 @@ nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
 
 
 reco = reco_space.zero()
-reco = 0.9 * phantom
+#reco = 0.9 * phantom
 
 get_proj_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
                                    Op_post=None)

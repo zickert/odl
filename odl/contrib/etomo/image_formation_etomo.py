@@ -8,7 +8,7 @@ __all__ = ('pupil_function', 'modulation_transfer_function',
            'optics_imperfections', 'make_imageFormationOp')
 
 
-def pupil_function(x, **kwargs):
+def pupil_function(xi, **kwargs):
     """Indicator function for the disc-shaped aperture, a.k.a. pupil function.
 
 
@@ -28,12 +28,29 @@ def pupil_function(x, **kwargs):
     aper_rad = kwargs.pop('aper_rad')
     focal_length = kwargs.pop('focal_length')
     wave_number = kwargs.pop('wave_number')
+    axes = kwargs.pop('axes')
+    rescale_factor = kwargs.pop('rescale_factor')
     scaled_rad = aper_rad * wave_number / focal_length
 
-    norm_sq = np.sum(xi ** 2 for xi in x[1:])
+    norm_sq = np.sum(xi[dim] ** 2 for dim in axes)
+    norm_sq *= rescale_factor ** 2
 
     return norm_sq <= scaled_rad ** 2
 
+def energy_spread_envelope(xi, **kwargs):
+    aper_angle = kwargs.pop('aper_angle')
+    focal_length = kwargs.pop('focal_length')
+    mean_energy_spread = kwargs.pop('mean_energy_spread')
+    chromatic_abe = kwargs.pop('chromatic_abe')
+    acc_voltage = kwargs.pop('acc_voltage')
+    axes = kwargs.pop('axes')
+    rescale_factor = kwargs.pop('rescale_factor')
+    scaled_rad = aper_rad * wave_number / focal_length
+
+    norm_sq = np.sum(xi[dim] ** 2 for dim in axes)
+    norm_sq *= rescale_factor ** 2
+
+    return norm_sq <= scaled_rad ** 2
 
 def modulation_transfer_function(x, **kwargs):
     """Function that characterizes the detector response.
@@ -103,6 +120,7 @@ def optics_imperfections(xi, **kwargs):
 
 
 def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
+                          focal_length, aper_rad,
                           abs_phase_ratio=1, obj_magnitude=1,
                           rescale_factor=1):
     """Return image-formation operator.
@@ -157,8 +175,15 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
                                          defocus=defocus, axes=ft_axes,
                                          rescale_factor=rescale_factor)
 
-    # Leave out pupil-function in the ctf
-    ctf = optics_imperf
+    pupil_fun = ft_ctf.range.element(pupil_function,
+                                     wave_number=wave_number,
+                                     focal_length=focal_length,
+                                     aper_rad=aper_rad, axes=ft_axes,
+                                     rescale_factor=rescale_factor)
+    ctf = pupil_fun * optics_imperf
+
+    pupil_fun.show(coords = [0, None, None])
+    optics_imperf.show(coords = [0, None, None])
 
     # The optics operator is a multiplication in frequency-space
     optics_op = ft_ctf.inverse * ctf * ft_ctf
