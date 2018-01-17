@@ -37,20 +37,89 @@ def pupil_function(xi, **kwargs):
 
     return norm_sq <= scaled_rad ** 2
 
+
 def energy_spread_envelope(xi, **kwargs):
-    aper_angle = kwargs.pop('aper_angle')
-    focal_length = kwargs.pop('focal_length')
+    """Function accounting for the energy spread of the electron source
+
+
+    Notes
+    -----
+    The energy spread envelope is defined as
+
+    .. math::
+
+        E_{\\text{spr}}(\\xi) = \\exp\\left(-\\frac{(\\Delta E)^2(C'_c)^2
+        |\\xi|^4}{16k^2}\\right)
+
+    where
+
+    .. math::
+
+        C'_c = \\frac{\left(1+E_{\\text{acc}}/E_0\\right)}
+        {E_{\\text{acc}}\left(1+E_{\\text{acc}}/2E_0\\right)}C_c,
+
+    :math:`C_c` is the chromatic aberration, :math:`E_{\\text{acc}}` is the
+    accelartion voltage of the source, :math:`E_0` is the rest energy of the
+    electron (in Volts), :math:`\\Delta E` is the mean energy spread of the
+    electron beam and :math:`\kappa` is the wave number of the incoming
+    electron wave.
+    """
     mean_energy_spread = kwargs.pop('mean_energy_spread')
     chromatic_abe = kwargs.pop('chromatic_abe')
     acc_voltage = kwargs.pop('acc_voltage')
+    wave_number = kwargs.pop('wave_number')
     axes = kwargs.pop('axes')
     rescale_factor = kwargs.pop('rescale_factor')
-    scaled_rad = aper_rad * wave_number / focal_length
 
     norm_sq = np.sum(xi[dim] ** 2 for dim in axes)
     norm_sq *= rescale_factor ** 2
 
-    return norm_sq <= scaled_rad ** 2
+    rest_energy = 0.511e6  # measured in Volt
+    C_prime = chromatic_abe * (1+acc_voltage/rest_energy)
+    C_prime /= (acc_voltage*(1+acc_voltage/(2*rest_energy)))
+
+    result = mean_energy_spread ** 2 * C_prime ** 2 * norm_sq ** 2
+    result /= (16 * wave_number ** 2)
+    result = np.exp(-result)
+
+    return result
+
+
+def source_size_envelope(xi, **kwargs):
+    """Function accounting for the finite source size
+
+
+    Notes
+    -----
+    The source size envelope is defined as
+
+    .. math::
+
+        E_{\\text{size}}(\\xi) = \\exp\\left(-\\frac{\\alpha_c^2}{4} |\\xi|^2
+        \\left(\\Delta z - \\frac{C_s |\\xi|^2}{k^2}\\right)^2\\right)
+
+    where
+
+    :math:`C_s` is the third-order spherical abberation of the lens,
+    :math:`\\Delta z` is the defocus, :math:`\\alpha_c` is the aperture angle
+    and :math:`\kappa` is the wave number of the incoming electron wave.
+    """
+    aper_angle = kwargs.pop('aper_angle')
+    spherical_abe = kwargs.pop('spherical_abe')
+    defocus = kwargs.pop('defocus')
+    axes = kwargs.pop('axes')
+    wave_number = kwargs.pop('wave_number')
+    rescale_factor = kwargs.pop('rescale_factor')
+
+    norm_sq = np.sum(xi[dim] ** 2 for dim in axes)
+    norm_sq *= rescale_factor ** 2
+
+    result = (aper_angle ** 2 / 4) * norm_sq
+    result *= (defocus - (spherical_abe * norm_sq / wave_number ** 2)) ** 2
+    result = np.exp(-result)
+
+    return result
+
 
 def modulation_transfer_function(x, **kwargs):
     """Function that characterizes the detector response.
@@ -120,9 +189,9 @@ def optics_imperfections(xi, **kwargs):
 
 
 def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
-                          focal_length, aper_rad,
-                          abs_phase_ratio=1, obj_magnitude=1,
-                          rescale_factor=1):
+                          focal_length, aper_rad, mean_energy_spread,
+                          acc_voltage, chromatic_abe, abs_phase_ratio=1,
+                          obj_magnitude=1, rescale_factor=1):
     """Return image-formation operator.
 
     Parameters
@@ -180,10 +249,25 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
                                      focal_length=focal_length,
                                      aper_rad=aper_rad, axes=ft_axes,
                                      rescale_factor=rescale_factor)
-    ctf = pupil_fun * optics_imperf
 
-    pupil_fun.show(coords = [0, None, None])
-    optics_imperf.show(coords = [0, None, None])
+    energy_env = ft_ctf.range.elememt(energy_spread_envelope,
+                                      wave_number=wave_number,
+                                      chromatic_abe=chromatic_abe,
+                                      axes=ft_axes, acc_voltage=acc_voltage,
+                                      mean_energy_spread=mean_energy_spread,
+                                      rescale_factor=rescale_factor)
+
+    size_env = ft_ctf.range.elememt(source_size_envelope,
+                                    wave_number=wave_number,
+                                    aper_rad=aper_rad,
+                                    spherical_abe, defocus=defocus,
+                                    axes=ft_axes,
+                                    rescale_factor=rescale_factor)
+
+    ctf = pupil_fun * optics_imperf * energy_env * size_env
+
+    pupil_fun.show(coords=[0, None, None])
+    optics_imperf.show(coords=[0, None, None])
 
     # The optics operator is a multiplication in frequency-space
     optics_op = ft_ctf.inverse * ctf * ft_ctf
