@@ -62,7 +62,12 @@ M = 25000.0
 aper_rad = 0.5*40e-6  # m
 focal_length = 2.7e-3  # m
 spherical_abe = 2.1e-3  # m
+chromatic_abe = 
+aper_rad = 
+acc_voltage =
+mean_energy_spread =
 defocus = 3e-6  # m
+
 
 # Set size of detector pixels (before rescaling to account for magnification)
 det_size = 16e-6  # m
@@ -103,7 +108,11 @@ imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
                                                 obj_magnitude=obj_magnitude,
                                                 abs_phase_ratio=abs_phase_ratio,
                                                 aper_rad=aper_rad,
-                                                focal_length=focal_length)
+                                                focal_length=focal_length,
+                                                aper_rad=aper_rad,
+                                                mean_energy_spread=mean_energy_spread,
+                                                acc_voltage=acc_voltage,
+                                                chromatic_abe=chromatic_abe)
 
 # Define forward operator as a composition
 forward_op = imageFormation_op * ray_trafo
@@ -154,14 +163,18 @@ kaczmarz_plan = etomo.make_kaczmarz_plan(num_angles,
 
 ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 
-F_post = etomo.make_imageFormationOp(ray_trafo_block.range, wave_number,
-                                     spherical_abe, defocus,
+F_post = etomo.make_imageFormationOp(ray_trafo_block.range,
+                                     wave_number, spherical_abe,
+                                     defocus,
                                      rescale_factor=rescale_factor,
                                      obj_magnitude=obj_magnitude,
                                      abs_phase_ratio=abs_phase_ratio,
                                      aper_rad=aper_rad,
-                                     focal_length=focal_length)
-
+                                     focal_length=focal_length,
+                                     aper_rad=aper_rad,
+                                     mean_energy_spread=mean_energy_spread,
+                                     acc_voltage=acc_voltage,
+                                     chromatic_abe=chromatic_abe)
 F_pre = odl.IdentityOperator(reco_space)
 
 
