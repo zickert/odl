@@ -189,9 +189,10 @@ def optics_imperfections(xi, **kwargs):
 
 
 def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
-                          focal_length, aper_rad, mean_energy_spread,
-                          acc_voltage, chromatic_abe, abs_phase_ratio=1,
-                          obj_magnitude=1, rescale_factor=1):
+                          focal_length, aper_rad, aper_angle,
+                          mean_energy_spread, acc_voltage, chromatic_abe,
+                          abs_phase_ratio=1, obj_magnitude=1,
+                          rescale_factor=1):
     """Return image-formation operator.
 
     Parameters
@@ -250,24 +251,28 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
                                      aper_rad=aper_rad, axes=ft_axes,
                                      rescale_factor=rescale_factor)
 
-    energy_env = ft_ctf.range.elememt(energy_spread_envelope,
+    energy_env = ft_ctf.range.element(energy_spread_envelope,
                                       wave_number=wave_number,
                                       chromatic_abe=chromatic_abe,
                                       axes=ft_axes, acc_voltage=acc_voltage,
                                       mean_energy_spread=mean_energy_spread,
                                       rescale_factor=rescale_factor)
 
-    size_env = ft_ctf.range.elememt(source_size_envelope,
+    size_env = ft_ctf.range.element(source_size_envelope,
                                     wave_number=wave_number,
-                                    aper_rad=aper_rad,
-                                    spherical_abe, defocus=defocus,
+                                    aper_angle=aper_angle,
+                                    spherical_abe=spherical_abe,
+                                    defocus=defocus,
                                     axes=ft_axes,
                                     rescale_factor=rescale_factor)
 
     ctf = pupil_fun * optics_imperf * energy_env * size_env
 
-    pupil_fun.show(coords=[0, None, None])
-    optics_imperf.show(coords=[0, None, None])
+#    pupil_fun.show(coords=[0, None, None])
+#    optics_imperf.show(coords=[0, None, None])
+#    energy_env.show(coords=[0, None, None])
+#    size_env.show(coords=[0, None, None])
+#    ctf.show(coords=[0, None, None])
 
     # The optics operator is a multiplication in frequency-space
     optics_op = ft_ctf.inverse * ctf * ft_ctf
