@@ -10,7 +10,7 @@ from odl.contrib import etomo
 from odl.contrib.mrc import FileReaderMRC
 
 # Read phantom and data.
-dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Balls/odlworkshop/gain_5000')
+dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Simulated/Balls/dose_6000')
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
 file_path_tiltseries = os.path.join(dir_path, 'tiltseries.mrc')
 
@@ -34,9 +34,8 @@ wave_number = 2 * np.pi / wave_length
 sigma = e_mass * e_charge / (wave_number * planck_bar ** 2)
 
 abs_phase_ratio = 0.1
-magic_factor = 1
-obj_magnitude = magic_factor * sigma / rescale_factor
-regpar = 2e3
+obj_magnitude = sigma / rescale_factor
+regpar = 3e3
 gamma_H1 = 0.9
 num_angles = 61
 num_angles_per_block = 1
@@ -52,6 +51,10 @@ M = 25000.0
 aper_rad = 0.5*40e-6  # m
 focal_length = 2.7e-3  # m
 spherical_abe = 2.1e-3  # m
+chromatic_abe = 2.2e-3  # m
+aper_angle = 0.1e-3  # rad
+acc_voltage = 200.0e3  # V
+mean_energy_spread = 1.3  # V
 defocus = 3e-6  # m
 
 # Set size of detector pixels (before rescaling to account for magnification)
@@ -67,17 +70,18 @@ reco_space = odl.uniform_discr(min_pt=[-rescale_factor*210e-9/4,
                                shape=[210, 250, 40], dtype='float64')
 # Make a 3d single-axis parallel beam geometry with flat detector
 # Angles: uniformly spaced, n = 180, min = 0, max = pi
-angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, num_angles)
+angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, num_angles,
+                                        nodes_on_bdry=True)
 detector_partition = odl.uniform_partition([-rescale_factor*det_size/M * 210/2,
                                             -rescale_factor*det_size/M * 250/2],
-                                           [rescale_factor*det_size/M * 200/2,
+                                           [rescale_factor*det_size/M * 210/2,
                                             rescale_factor*det_size/M * 250/2],
                                             [210, 250])
 
 # The x-axis is the tilt-axis.
 geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition,
                                            axis=(1, 0, 0),
-                                           det_pos_init=(0, 0, -1),
+                                           det_pos_init=(0, 0, 1),
                                            det_axes_init=((1, 0, 0),
                                                           (0, 1, 0)))
 
@@ -89,13 +93,16 @@ ray_trafo = etomo.BlockRayTransform(reco_space, geometry)
 imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range, 
                                                 wave_number, spherical_abe,
                                                 defocus,
-                                                rescale_factor=rescale_factor,
                                                 obj_magnitude=obj_magnitude,
-                                                abs_phase_ratio=abs_phase_ratio)
+                                                rescale_factor=rescale_factor,
+                                                abs_phase_ratio=abs_phase_ratio,
+                                                aper_rad=aper_rad,
+                                                aper_angle=aper_angle,
+                                                focal_length=focal_length,
+                                                mean_energy_spread=mean_energy_spread,
+                                                acc_voltage=acc_voltage,
+                                                chromatic_abe=chromatic_abe)
 
-# Define a spherical mask to implement support constraint.
-mask = reco_space.element(etomo.spherical_mask,
-                          radius=rescale_factor * 10.0e-9)
 
 # Define forward operator as a composition
 forward_op = imageFormation_op * ray_trafo
@@ -110,15 +117,6 @@ data_from_this_model = forward_op(phantom)
 
 # Make  a ODL discretized function of the MRC data
 data = forward_op.range.element(np.transpose(data_asarray, (2, 0, 1)))
-
-# Plot phantom and data
-# phantom.show(coords=[0, None, None])
-# phantom_abs.show(coords=[0, None, None])
-# data.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
-
-# plt.imshow(true_data, cmap='gray')
-# plt.colorbar()
-# true_data.show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
 
 # Correct for diffrent pathlenght of the electrons through the buffer
 data = etomo.buffer_correction(data)
@@ -144,11 +142,17 @@ kaczmarz_plan = etomo.make_kaczmarz_plan(num_angles,
 
 ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 
-F_post = etomo.make_imageFormationOp(ray_trafo_block.range, wave_number,
-                                     spherical_abe, defocus,
+F_post = etomo.make_imageFormationOp(ray_trafo_block.range,
+                                     wave_number, spherical_abe,
+                                     defocus,
                                      rescale_factor=rescale_factor,
                                      obj_magnitude=obj_magnitude,
-                                     abs_phase_ratio=abs_phase_ratio)
+                                     abs_phase_ratio=abs_phase_ratio,
+                                     aper_rad=aper_rad, aper_angle=aper_angle,
+                                     focal_length=focal_length,
+                                     mean_energy_spread=mean_energy_spread,
+                                     acc_voltage=acc_voltage,
+                                     chromatic_abe=chromatic_abe)
 
 #F_pre = odl.MultiplyOperator(mask, reco_space, reco_space)
 # we skip the mask for the Balls phantom

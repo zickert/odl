@@ -26,7 +26,7 @@ wave_length = 0.00196e-9  # m
 wave_number = 2 * np.pi / wave_length
 sigma = e_mass * e_charge / (wave_number * planck_bar ** 2)
 
-abs_phase_ratio = 1
+abs_phase_ratio = 0.1
 obj_magnitude = sigma / rescale_factor
 regpar = 3e3
 num_angles = 81
@@ -41,7 +41,12 @@ detector_zero_level = np.min(data)
 aper_rad = 30e-6  # m
 focal_length = 3.48e-3  # m
 spherical_abe = 2.7e-3  # m
+chromatic_abe = 2.6e-3  # m
+aper_angle = 0.05e-3  # rad
+acc_voltage = 300.0e3  # V
+mean_energy_spread = 0.6  # V
 defocus = 6e-6  # m
+
 
 voxel_size = 0.4767e-9  # m
 
@@ -57,7 +62,7 @@ reco_space = odl.uniform_discr(min_pt=[-rescale_factor*256*voxel_size,
 # Make a 3d single-axis parallel beam geometry with flat detector
 # Angles: uniformly spaced, n = num_angles, min = -62.18 deg, max = 58.03 deg
 angle_partition = odl.uniform_partition(-62.18*np.pi/180, 58.03*np.pi/180,
-                                        num_angles)
+                                        num_angles, nodes_on_bdry=True)
 
 detector_partition = odl.uniform_partition([-rescale_factor*256*voxel_size,
                                             -rescale_factor*128*voxel_size],
@@ -77,12 +82,18 @@ ray_trafo = etomo.BlockRayTransform(reco_space, geometry)
 
 # The image-formation operator models the optics and the detector
 # of the electron microscope.
-imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
+imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range, 
                                                 wave_number, spherical_abe,
                                                 defocus,
                                                 rescale_factor=rescale_factor,
                                                 obj_magnitude=obj_magnitude,
-                                                abs_phase_ratio=abs_phase_ratio)
+                                                abs_phase_ratio=abs_phase_ratio,
+                                                aper_rad=aper_rad,
+                                                aper_angle=aper_angle,
+                                                focal_length=focal_length,
+                                                mean_energy_spread=mean_energy_spread,
+                                                acc_voltage=acc_voltage,
+                                                chromatic_abe=chromatic_abe)
 
 # Define a spherical mask to implement support constraint.
 mask = reco_space.element(etomo.spherical_mask, radius=rescale_factor * 1) # * 55e-9)
@@ -113,11 +124,17 @@ kaczmarz_plan = etomo.make_kaczmarz_plan(num_angles,
 
 ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 
-F_post = etomo.make_imageFormationOp(ray_trafo_block.range, wave_number,
-                                     spherical_abe, defocus,
+F_post = etomo.make_imageFormationOp(ray_trafo_block.range,
+                                     wave_number, spherical_abe,
+                                     defocus,
                                      rescale_factor=rescale_factor,
                                      obj_magnitude=obj_magnitude,
-                                     abs_phase_ratio=abs_phase_ratio)
+                                     abs_phase_ratio=abs_phase_ratio,
+                                     aper_rad=aper_rad, aper_angle=aper_angle,
+                                     focal_length=focal_length,
+                                     mean_energy_spread=mean_energy_spread,
+                                     acc_voltage=acc_voltage,
+                                     chromatic_abe=chromatic_abe)
 
 F_pre = odl.MultiplyOperator(mask, reco_space, reco_space)
 

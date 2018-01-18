@@ -8,7 +8,7 @@ from odl.contrib import etomo
 from odl.contrib.mrc import FileReaderMRC
 
 # Read phantom and data.
-dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Simulated/Balls/gain_5000')
+dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Simulated/Balls/dose_6000')
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
 file_path_tiltseries = os.path.join(dir_path, 'tiltseries.mrc')
 
@@ -32,8 +32,7 @@ wave_number = 2 * np.pi / wave_length
 sigma = e_mass * e_charge / (wave_number * planck_bar ** 2)
 
 abs_phase_ratio = 0.1
-magic_factor = 1
-obj_magnitude = magic_factor * sigma / rescale_factor
+obj_magnitude = sigma / rescale_factor
 num_angles = 61
 
 # Define properties of the optical system
@@ -42,6 +41,10 @@ M = 25000.0
 aper_rad = 0.5*40e-6  # m
 focal_length = 2.7e-3  # m
 spherical_abe = 2.1e-3  # m
+chromatic_abe = 2.2e-3  # m
+aper_angle = 0.1e-3  # rad
+acc_voltage = 200.0e3  # V
+mean_energy_spread = 1.3  # V
 defocus = 3e-6  # m
 
 # Set size of detector pixels (before rescaling to account for magnification)
@@ -57,10 +60,10 @@ reco_space = odl.uniform_discr(min_pt=[-rescale_factor*210e-9/4,
                                shape=[210, 250, 40], dtype='float64')
 # Make a 3d single-axis parallel beam geometry with flat detector
 # Angles: uniformly spaced, n = 180, min = 0, max = pi
-angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, num_angles)
+angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, num_angles, nodes_on_bdry=True)
 detector_partition = odl.uniform_partition([-rescale_factor*det_size/M * 210/2,
                                             -rescale_factor*det_size/M * 250/2],
-                                           [rescale_factor*det_size/M * 200/2,
+                                           [rescale_factor*det_size/M * 210/2,
                                             rescale_factor*det_size/M * 250/2],
                                             [210, 250])
 
@@ -81,8 +84,13 @@ imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
                                                 defocus,
                                                 rescale_factor=rescale_factor,
                                                 obj_magnitude=obj_magnitude,
-                                                abs_phase_ratio=abs_phase_ratio)
-
+                                                abs_phase_ratio=abs_phase_ratio,
+                                                aper_rad=aper_rad,
+                                                aper_angle=aper_angle,
+                                                focal_length=focal_length,
+                                                mean_energy_spread=mean_energy_spread,
+                                                acc_voltage=acc_voltage,
+                                                chromatic_abe=chromatic_abe)
 
 phantom = reco_space.element(phantom_asarray)
 
@@ -116,6 +124,7 @@ data.show(coords=[0, None, None])
 # Renormalize data so that it matches "data_from_this_model"
 data *= np.mean(data_from_this_model.asarray())
 
+
 #PDHG
 ####################
 # --- Set up the inverse problem --- #
@@ -135,7 +144,7 @@ g = odl.solvers.ZeroFunctional(op.domain)
 l2_norm = odl.solvers.L2NormSquared(forward_op.range).translated(data)
 
 #
-reg_param = 1000
+reg_param = 0.015
 
 # Isotropic TV-regularization i.e. the l1-norm
 l1_norm = reg_param * odl.solvers.GroupL1Norm(gradient.range)
@@ -146,7 +155,7 @@ f = odl.solvers.SeparableSum(l2_norm, l1_norm)
 # --- Select solver parameters and solve using PDHG --- #
 
 # Estimated operator norm, add 10 percent to ensure ||K||_2^2 * sigma * tau < 1
-op_norm = 1.1 * 7.4465020879509245 # 1.1 * odl.power_method_opnorm(op)
+op_norm = 1.1 * 0.067 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.one()))
 
 niter = 10000  # Number of iterations
 tau = 1.0 / op_norm  # Step size for the primal variable
@@ -156,6 +165,7 @@ sigma = 1.0 / op_norm  # Step size for the dual variable
 
 # Choose a starting point
 x = reco_space.zero()
+#x = 0.5*phantom
 
 # define callback 
 callback = (odl.solvers.CallbackPrintIteration(step=200) &

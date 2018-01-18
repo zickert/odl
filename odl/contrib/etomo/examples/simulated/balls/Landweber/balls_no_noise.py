@@ -50,6 +50,10 @@ M = 25000.0
 aper_rad = 0.5*40e-6  # m
 focal_length = 2.7e-3  # m
 spherical_abe = 2.1e-3  # m
+chromatic_abe = 2.2e-3  # m
+aper_angle = 0.1e-3  # rad
+acc_voltage = 200.0e3  # V
+mean_energy_spread = 1.3  # V
 defocus = 3e-6  # m
 
 # Set size of detector pixels (before rescaling to account for magnification)
@@ -68,7 +72,7 @@ reco_space = odl.uniform_discr(min_pt=[-rescale_factor*210e-9/4,
 angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, num_angles)
 detector_partition = odl.uniform_partition([-rescale_factor*det_size/M * 210/2,
                                             -rescale_factor*det_size/M * 250/2],
-                                           [rescale_factor*det_size/M * 200/2,
+                                           [rescale_factor*det_size/M * 210/2,
                                             rescale_factor*det_size/M * 250/2],
                                             [210, 250])
 
@@ -89,7 +93,13 @@ imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
                                                 defocus,
                                                 rescale_factor=rescale_factor,
                                                 obj_magnitude=obj_magnitude,
-                                                abs_phase_ratio=abs_phase_ratio)
+                                                abs_phase_ratio=abs_phase_ratio,
+                                                aper_rad=aper_rad,
+                                                aper_angle=aper_angle,
+                                                focal_length=focal_length,
+                                                mean_energy_spread=mean_energy_spread,
+                                                acc_voltage=acc_voltage,
+                                                chromatic_abe=chromatic_abe)
 
 # Define forward operator as a composition
 forward_op = imageFormation_op * ray_trafo
@@ -136,7 +146,7 @@ data *= np.mean(data_from_this_model.asarray())
 
 #%% 
 reco = ray_trafo.domain.zero()
-reco = phantom
+reco = 0.5*phantom
 callback = (odl.solvers.CallbackPrintIteration() &
             odl.solvers.CallbackShow())
 
