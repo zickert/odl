@@ -60,7 +60,8 @@ reco_space = odl.uniform_discr(min_pt=[-rescale_factor*210e-9/4,
                                shape=[210, 250, 40], dtype='float64')
 # Make a 3d single-axis parallel beam geometry with flat detector
 # Angles: uniformly spaced, n = 180, min = 0, max = pi
-angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, num_angles, nodes_on_bdry=True)
+angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, num_angles,
+                                        nodes_on_bdry=True)
 detector_partition = odl.uniform_partition([-rescale_factor*det_size/M * 210/2,
                                             -rescale_factor*det_size/M * 250/2],
                                            [rescale_factor*det_size/M * 210/2,

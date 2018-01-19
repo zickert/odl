@@ -34,15 +34,8 @@ wave_number = 2 * np.pi / wave_length
 sigma = e_mass * e_charge / (wave_number * planck_bar ** 2)
 
 abs_phase_ratio = 0.1
-magic_factor = 1
-obj_magnitude = magic_factor * sigma / rescale_factor
+obj_magnitude = sigma / rescale_factor
 num_angles = 61
-num_angles_per_block = 1
-num_cycles = 3
-
-# Define sample diameter and height. We take flat sample
-sample_diam = 1200e-9  # m
-sample_height = 150e-9  # m
 
 # Define properties of the optical system
 # Set focal_length to be the focal_length of the principal (first) lens !
@@ -69,7 +62,7 @@ reco_space = odl.uniform_discr(min_pt=[-rescale_factor*210e-9/4,
                                shape=[210, 250, 40], dtype='float64')
 # Make a 3d single-axis parallel beam geometry with flat detector
 # Angles: uniformly spaced, n = 180, min = 0, max = pi
-angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, num_angles)
+angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, num_angles, nodes_on_bdry=True)
 detector_partition = odl.uniform_partition([-rescale_factor*det_size/M * 210/2,
                                             -rescale_factor*det_size/M * 250/2],
                                            [rescale_factor*det_size/M * 210/2,
@@ -84,7 +77,7 @@ geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition,
                                                           (0, 1, 0)))
 
 # Ray transform
-ray_trafo = etomo.BlockRayTransform(reco_space, geometry)
+ray_trafo = odl.tomo.RayTransform(reco_space, geometry)
 
 # The image-formation operator models the optics and the detector
 # of the electron microscope.
@@ -101,9 +94,15 @@ imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
                                                 acc_voltage=acc_voltage,
                                                 chromatic_abe=chromatic_abe)
 
+phantom = reco_space.element(phantom_asarray)
+
 # Define forward operator as a composition
 forward_op = imageFormation_op * ray_trafo
-phantom = reco_space.element(phantom_asarray)
+
+lin_op = 1+forward_op.derivative(reco_space.zero())
+#forward_op(phantom).show(coords=[0, None, None])
+#lin_op(phantom).show(coords=[0, None, None])
+
 
 # remove background
 bg_cst = np.min(phantom)
@@ -111,6 +110,7 @@ phantom -= bg_cst
 
 # Create data by calling the forward operator on the phantom
 data_from_this_model = forward_op(phantom)
+
 
 # Make  a ODL discretized function of the MRC data
 data = forward_op.range.element(np.transpose(data_asarray, (2, 0, 1)))
@@ -126,31 +126,20 @@ data.show(coords=[0, None, None])
 # Renormalize data so that it matches "data_from_this_model"
 data *= np.mean(data_from_this_model.asarray())
 
-# Plot results
-# etomo.plot_3d_ortho_slices(phantom)
-# etomo.plot_3d_ortho_slices(reco)
-
-## Save planes of reco (orthogonal to x,y and z axes)
-#nn_reco_fig_x = reco.show(title='balls_no_noise_reco_x',
-#                          coords=[0, None, None])
-#nn_reco_fig_x.savefig('balls_no_noise_reco_x')
-#
-#nn_reco_fig_y = reco.show(title='balls_no_noise_reco_y',
-#                          coords=[None, 0, None])
-#nn_reco_fig_y.savefig('balls_no_noise_reco_y')
-#
-#nn_reco_fig_z = reco.show(title='balls_no_noise_reco_z',
-#                          coords=[None, None, 0])
-#nn_reco_fig_z.savefig('balls_no_noise_reco_z')
 
 
-#%% 
+
 reco = ray_trafo.domain.zero()
-reco = 0.5*phantom
+#reco = 0.5*phantom
 callback = (odl.solvers.CallbackPrintIteration() &
             odl.solvers.CallbackShow())
 
 #Landweber iterations
 nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
 
-odl.solvers.landweber(forward_op, reco, data, 1000, omega=3e1, callback=callback,projection=nonneg_projection)
+op_norm = 1.1 * 0.067
+
+omega = 1 / (op_norm ** 2)
+
+odl.solvers.landweber(forward_op, reco, data, 1000, omega=omega,
+                      callback=callback,projection=nonneg_projection)
