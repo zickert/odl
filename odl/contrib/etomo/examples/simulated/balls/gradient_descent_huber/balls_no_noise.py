@@ -1,7 +1,5 @@
 """Electron tomography reconstruction example using data from TEM-Simulator"""
 
-import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt 
 import numpy as np
 import os
@@ -116,7 +114,7 @@ data_from_this_model = forward_op(phantom)
 data = forward_op.range.element(np.transpose(data_asarray, (2, 0, 1)))
 
 # Correct for diffrent pathlenght of the electrons through the buffer
-data = etomo.buffer_correction(data)
+data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
 data_from_this_model = etomo.buffer_correction(data_from_this_model)
 
 # Plot corrected data
@@ -135,29 +133,20 @@ callback = (odl.solvers.CallbackPrintIteration() &
 #Landweber iterations
 nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
 
-op_norm = 1.1 * 0.067
-
 gamma = 0.1
-
-
 gradient = odl.Gradient(reco_space)
-
-
 huber_func = odl.solvers.Huber(gradient.range, gamma=gamma)
-l1 = odl.solvers.GroupL1Norm(gradient.range)
-l2 = odl.solvers.L2NormSquared(gradient.range)
-
 TV_smothened = huber_func * gradient
 
 # l2-squared data matching
 l2_norm = odl.solvers.L2NormSquared(forward_op.range).translated(data)
 
-reg_par = 1e-10
+reg_par = 0.01
 
 f = l2_norm * forward_op + reg_par * TV_smothened
 
-#ls = odl.solvers.BacktrackingLineSearch(f)
+ls = odl.solvers.BacktrackingLineSearch(f)
 
-odl.solvers.steepest_descent(f, reco, line_search=3, callback=callback,
+odl.solvers.steepest_descent(f, reco, line_search=ls, callback=callback,
                              projection=nonneg_projection)
 

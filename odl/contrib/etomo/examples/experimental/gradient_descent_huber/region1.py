@@ -9,7 +9,7 @@ from odl.contrib.mrc import FileReaderMRC
 
 # Read data
 dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Experimental')
-file_path_data = os.path.join(dir_path, 'region2.mrc')
+file_path_data = os.path.join(dir_path, 'region1.mrc')
 
 with FileReaderMRC(file_path_data) as reader:
     header, data = reader.read()
@@ -22,7 +22,7 @@ rescale_factor = 1e9
 e_mass = 9.11e-31  # kg
 e_charge = 1.602e-19  # C
 planck_bar = 1.059571e-34  # Js/rad
-wave_length = 0.00196e-9 # m
+wave_length = 0.00196e-9  # m
 wave_number = 2 * np.pi / wave_length
 sigma = e_mass * e_charge / (wave_number * planck_bar ** 2)
 
@@ -32,6 +32,13 @@ regpar = 3e3
 num_angles = 81
 num_angles_per_block = 1
 num_cycles = 3
+
+#dose = 1 # not known
+#det_after_M = (det_size / M)  **2
+#
+#electrons_per_pixel = (dose / det_after_M ) / 61
+
+
 
 detector_zero_level = np.min(data)
 
@@ -45,7 +52,7 @@ chromatic_abe = 2.6e-3  # m
 aper_angle = 0.05e-3  # rad
 acc_voltage = 300.0e3  # V
 mean_energy_spread = 0.6  # V
-defocus = 6e-6  # m# m
+defocus = 6e-6  # m
 
 voxel_size = 0.4767e-9  # m
 
@@ -61,7 +68,7 @@ reco_space = odl.uniform_discr(min_pt=[-rescale_factor*256*voxel_size,
 # Make a 3d single-axis parallel beam geometry with flat detector
 # Angles: uniformly spaced, n = num_angles, min = -62.18 deg, max = 58.03 deg
 angle_partition = odl.uniform_partition(-62.18*np.pi/180, 58.03*np.pi/180,
-                                        num_angles)
+                                        num_angles, nodes_on_bdry=True)
 
 detector_partition = odl.uniform_partition([-rescale_factor*256*voxel_size,
                                             -rescale_factor*128*voxel_size],
@@ -111,68 +118,28 @@ data_bc.show(coords=[0, None, None])
 
 data_renormalized = data_bc * np.mean(imageFormation_op(imageFormation_op.domain.zero()).asarray())
 
-
-# %% TRY RECONSTRUCTION
-
-callback = (odl.solvers.CallbackPrintIteration() &
-            odl.solvers.CallbackShow())
-
-
-kaczmarz_plan = etomo.make_kaczmarz_plan(num_angles,
-                                         block_length=num_angles_per_block,
-                                         method='random')
-
-ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
-
-F_post = etomo.make_imageFormationOp(ray_trafo_block.range,
-                                     wave_number, spherical_abe,
-                                     defocus,
-                                     rescale_factor=rescale_factor,
-                                     obj_magnitude=obj_magnitude,
-                                     abs_phase_ratio=abs_phase_ratio,
-                                     aper_rad=aper_rad, aper_angle=aper_angle,
-                                     focal_length=focal_length,
-                                     mean_energy_spread=mean_energy_spread,
-                                     acc_voltage=acc_voltage,
-                                     chromatic_abe=chromatic_abe)
-
-F_pre = odl.MultiplyOperator(mask, reco_space, reco_space)
-
-get_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
-                              Op_post=F_post)
-get_data = etomo.make_data_blocks(data_renormalized, kaczmarz_plan)
-
-# Optional nonnegativity-constraint
-nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
+data = data_renormalized
 
 
 reco = reco_space.zero()
-get_proj_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
-                                   Op_post=None)
+callback = (odl.solvers.CallbackPrintIteration() &
+            odl.solvers.CallbackShow())
 
-etomo.kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
-                           regpar*obj_magnitude ** 2,
-                           imageFormationOp=F_post, gamma_H1=0.9, niter_CG=30,
-                           callback=callback, num_cycles=num_cycles,
-                           projection=nonneg_projection)
+#Landweber iterations
+nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
 
+gamma = 0.1
+gradient = odl.Gradient(reco_space)
+huber_func = odl.solvers.Huber(gradient.range, gamma=gamma)
+TV_smothened = huber_func * gradient
 
-# Plot results
-etomo.plot_3d_ortho_slices(reco)
+# l2-squared data matching
+l2_norm = odl.solvers.L2NormSquared(forward_op.range).translated(data)
 
+reg_par = 0.01
+f = l2_norm * forward_op + reg_par * TV_smothened
+ls = odl.solvers.BacktrackingLineSearch(f)
 
-## %%
-#for angle_idx in range(num_angles):
-#    proj_op = ray_trafo.get_sub_operator([angle_idx])
-#    proj = proj_op(proj_op.domain.one())
-#    center = 0.5*(proj.space.min_pt[0] + proj.space.max_pt[0])
-#    proj.show(coords=[center, None, None])
-#
-## %%
-#for angle_idx in range(num_angles):
-#    image = proj_op.range.element(data_renormalized.asarray()[angle_idx, :, :])
-#    center = 0.5*(image.space.min_pt[0] + image.space.max_pt[0])
-#    image.show(coords=[center, None, None])
-#    # plt.figure(); plt.imshow(image, vmin = 0.9, vmax = 1.0); plt.colorbar();
-## -*- coding: utf-8 -*-
-#
+odl.solvers.steepest_descent(f, reco, line_search=ls, callback=callback,
+                             projection=nonneg_projection)
+

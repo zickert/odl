@@ -98,9 +98,7 @@ phantom = reco_space.element(phantom_asarray)
 # Define forward operator as a composition
 forward_op = imageFormation_op * ray_trafo
 
-lin_op = 1+forward_op.derivative(reco_space.zero())
-#forward_op(phantom).show(coords=[0, None, None])
-#lin_op(phantom).show(coords=[0, None, None])
+lin_op = forward_op(reco_space.zero())+forward_op.derivative(reco_space.zero())
 
 
 # remove background
@@ -109,71 +107,76 @@ phantom -= bg_cst
 
 # Create data by calling the forward operator on the phantom
 data_from_this_model = forward_op(phantom)
-
+data_from_this_model_lin = lin_op(phantom)
 
 # Make  a ODL discretized function of the MRC data
 data = forward_op.range.element(np.transpose(data_asarray, (2, 0, 1)))
 
 # Correct for diffrent pathlenght of the electrons through the buffer
 data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
+
 data_from_this_model = etomo.buffer_correction(data_from_this_model)
 
 # Plot corrected data
 data_from_this_model.show(coords=[0, None, None])
-data.show(coords=[0, None, None])
+data_from_this_model_lin.show(coords=[0, None, None])
 
 # Renormalize data so that it matches "data_from_this_model"
 data *= np.mean(data_from_this_model.asarray())
 
+nonlinearity = data_from_this_model - data_from_this_model_lin
+nonlinearity.show(coords=[0, None, None])
 
-#PDHG
-####################
-# --- Set up the inverse problem --- #
+(data-data_from_this_model_lin).show(coords = [0,None,None])
 
-# Initialize gradient operator
-gradient = odl.Gradient(reco_space)
 
-# Column vector of two operators
-op = odl.BroadcastOperator(forward_op, gradient)
-
-# Do not use the g functional, set it to zero.
-g = odl.solvers.IndicatorNonnegativity(reco_space)
-
-# Create functionals for the dual variable
-
-# l2-squared data matching
-l2_norm = odl.solvers.L2NormSquared(forward_op.range).translated(data)
-
+##PDHG
+#####################
+## --- Set up the inverse problem --- #
 #
-reg_param = 0.015
-
-# Isotropic TV-regularization i.e. the l1-norm
-l1_norm = reg_param * odl.solvers.GroupL1Norm(gradient.range)
-
-# Combine functionals, order must correspond to the operator K
-f = odl.solvers.SeparableSum(l2_norm, l1_norm)
-
-# --- Select solver parameters and solve using PDHG --- #
-
-# Estimated operator norm, add 10 percent to ensure ||K||_2^2 * sigma * tau < 1
-op_norm = 1.1 * 0.067 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.one()))
-
-
-niter = 10000  # Number of iterations
-tau = 1.0 / op_norm  # Step size for the primal variable
-sigma = 1.0 / op_norm  # Step size for the dual variable
-
-
-
-# Choose a starting point
-x = reco_space.zero()
-#x = 0.5*phantom
-
-# define callback 
-callback = (odl.solvers.CallbackPrintIteration(step=200) &
-            odl.solvers.CallbackShow(step=200))
-# Run the algorithm
-odl.solvers.pdhg(x, f, g, op, tau=tau, sigma=sigma, niter=niter,
-                 callback=callback)
-
-
+## Initialize gradient operator
+#gradient = odl.Gradient(reco_space)
+#
+## Column vector of two operators
+#op = odl.BroadcastOperator(forward_op, gradient)
+#
+## Do not use the g functional, set it to zero.
+#g = odl.solvers.IndicatorNonnegativity(reco_space)
+#
+## Create functionals for the dual variable
+#
+## l2-squared data matching
+#l2_norm = odl.solvers.L2NormSquared(forward_op.range).translated(data)
+#
+##
+#reg_param = 0.015
+#
+## Isotropic TV-regularization i.e. the l1-norm
+#l1_norm = reg_param * odl.solvers.GroupL1Norm(gradient.range)
+#
+## Combine functionals, order must correspond to the operator K
+#f = odl.solvers.SeparableSum(l2_norm, l1_norm)
+#
+## --- Select solver parameters and solve using PDHG --- #
+#
+## Estimated operator norm, add 10 percent to ensure ||K||_2^2 * sigma * tau < 1
+#op_norm = 1.1 * 0.067 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.one()))
+#
+#niter = 3000  # Number of iterations
+#tau = 0.1 / op_norm  # Step size for the primal variable
+#sigma = 0.1 / op_norm  # Step size for the dual variable
+#
+#
+#
+## Choose a starting point
+#x = reco_space.zero()
+##x = 0.5*phantom
+#
+## define callback 
+#callback = (odl.solvers.CallbackPrintIteration(step=200) &
+#            odl.solvers.CallbackShow(step=200))
+## Run the algorithm
+#odl.solvers.pdhg(x, f, g, op, tau=tau, sigma=sigma, niter=niter,
+#                 callback=callback)
+#
+#
