@@ -118,32 +118,45 @@ data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
 data_from_this_model = etomo.buffer_correction(data_from_this_model)
 
 # Plot corrected data
-data_from_this_model.show(coords=[0, None, None])
-data.show(coords=[0, None, None])
+#data_from_this_model.show(coords=[0, None, None])
+#data.show(coords=[0, None, None])
 
 # Renormalize data so that it matches "data_from_this_model"
 data *= np.mean(data_from_this_model.asarray())
 
 
 
-reco = reco_space.zero()
-callback = (odl.solvers.CallbackPrintIteration() &
-            odl.solvers.CallbackShow())
+reg_par_list = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3, 1e4, 1e5]
+gamma_huber_list = [1e-2, 1e-1, 1e0]
 
-nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
 
-gamma_huber = 0.1
-gradient = odl.Gradient(reco_space)
-huber_func = odl.solvers.Huber(gradient.range, gamma=gamma_huber)
-TV_smothened = huber_func * gradient
+reco_path = '/home/zickert/TEM_reco_project/Reconstructions/Simulated/Balls/dose_6000/gradient_descent_huber_reg'
 
-# l2-squared data matching
-l2_norm = odl.solvers.L2NormSquared(forward_op.range).translated(data)
-
-reg_par = 0.01
-f = l2_norm * forward_op + reg_par * TV_smothened
-ls = odl.solvers.BacktrackingLineSearch(f)
-
-odl.solvers.steepest_descent(f, reco, line_search=ls, callback=callback,
-                             projection=nonneg_projection)
-
+for gamma_huber in gamma_huber_list:
+    for reg_par in reg_par_list:
+    
+        saveto_path = reco_path+'_gamma='+str(gamma_huber)+'_reg_par='+str(reg_par)+'/iterate_{}'
+        
+        callback = odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
+                                                  step=200, impl='numpy')
+    
+        reco = reco_space.zero()
+    
+        nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
+    
+    
+        gradient = odl.Gradient(reco_space)
+        huber_func = odl.solvers.Huber(gradient.range, gamma=gamma_huber)
+        TV_smothened = huber_func * gradient
+    
+        # l2-squared data matching
+        l2_norm = odl.solvers.L2NormSquared(forward_op.range).translated(data)
+    
+        # reg_par = 0.01
+    
+        f = l2_norm * forward_op + reg_par * TV_smothened
+    
+        ls = odl.solvers.BacktrackingLineSearch(f)
+    
+        odl.solvers.steepest_descent(f, reco, line_search=ls, callback=callback,
+                                     projection=nonneg_projection)

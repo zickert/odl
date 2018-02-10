@@ -130,12 +130,11 @@ reco = reco_space.zero()
 callback = (odl.solvers.CallbackPrintIteration() &
             odl.solvers.CallbackShow())
 
-#Landweber iterations
 nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
 
-gamma = 0.1
+gamma_huber = 0.1
 gradient = odl.Gradient(reco_space)
-huber_func = odl.solvers.Huber(gradient.range, gamma=gamma)
+huber_func = odl.solvers.Huber(gradient.range, gamma=gamma_huber)
 TV_smothened = huber_func * gradient
 
 # l2-squared data matching

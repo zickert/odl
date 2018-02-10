@@ -122,9 +122,13 @@ data_from_this_model = etomo.buffer_correction(data_from_this_model)
 data_from_this_model.show(coords=[0, None, None])
 data.show(coords=[0, None, None])
 
+diff = data-data_from_this_model
+diff.show(coords=[0, None, None])
+
 # Renormalize data so that it matches "data_from_this_model"
 data *= np.mean(data_from_this_model.asarray())
 
+#%%
 
 #PDHG
 ####################
@@ -160,8 +164,8 @@ op_norm = 1.1 * 0.067 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco
 
 
 niter = 10000  # Number of iterations
-tau = 1.0 / op_norm  # Step size for the primal variable
-sigma = 1.0 / op_norm  # Step size for the dual variable
+tau = 0.01 / op_norm  # Step size for the primal variable
+sigma = 0.01 / op_norm  # Step size for the dual variable
 
 
 

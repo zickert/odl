@@ -159,8 +159,8 @@ f = odl.solvers.SeparableSum(l2_norm, l1_norm)
 op_norm = 1.1 * 0.067 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.one()))
 
 niter = 3000  # Number of iterations
-tau = 0.1 / op_norm  # Step size for the primal variable
-sigma = 0.1 / op_norm  # Step size for the dual variable
+tau = 0.01 / op_norm  # Step size for the primal variable
+sigma = 0.01 / op_norm  # Step size for the dual variable
 
 
 
