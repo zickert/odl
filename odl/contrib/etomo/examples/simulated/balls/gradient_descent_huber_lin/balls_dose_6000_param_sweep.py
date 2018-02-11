@@ -97,10 +97,12 @@ phantom = reco_space.element(phantom_asarray)
 # Define forward operator as a composition
 forward_op = imageFormation_op * ray_trafo
 
-lin_op = 1+forward_op.derivative(reco_space.zero())
+lin_op = forward_op(reco_space.zero())+forward_op.derivative(reco_space.zero())
 #forward_op(phantom).show(coords=[0, None, None])
 #lin_op(phantom).show(coords=[0, None, None])
 
+# We use the linearized forward operator
+forward_op = lin_op
 
 # remove background
 bg_cst = np.min(phantom)
@@ -130,7 +132,7 @@ reg_par_list = [1e-4, 5e-4, 1e-3, 5e-3, 1e-2]
 gamma_huber_list = [1e-2, 1e-3, 1e-1]
 
 
-reco_path = '/home/zickert/TEM_reco_project/Reconstructions/Simulated/Balls/dose_6000/gradient_descent_huber_reg'
+reco_path = '/home/zickert/TEM_reco_project/Reconstructions/Simulated/Balls/dose_6000/gradient_descent_huber_reg_LINEARIZED'
 
 for gamma_huber in gamma_huber_list:
     for reg_par in reg_par_list:
@@ -138,7 +140,7 @@ for gamma_huber in gamma_huber_list:
         saveto_path = reco_path+'_gamma='+str(gamma_huber)+'_reg_par='+str(reg_par)+'/iterate_{}'
         
         callback = odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
-                                                  step=1, impl='numpy')
+                                                  step=200, impl='numpy')
     
         reco = reco_space.zero()
     
