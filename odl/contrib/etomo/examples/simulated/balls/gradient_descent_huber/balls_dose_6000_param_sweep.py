@@ -138,7 +138,7 @@ for gamma_huber in gamma_huber_list:
         saveto_path = reco_path+'_gamma='+str(gamma_huber)+'_reg_par='+str(reg_par)+'/iterate_{}'
         
         callback = odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
-                                                  step=1, impl='numpy')
+                                                  step=200, impl='numpy')
     
         reco = reco_space.zero()
     
