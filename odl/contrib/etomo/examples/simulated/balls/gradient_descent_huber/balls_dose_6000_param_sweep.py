@@ -127,8 +127,8 @@ data *= np.mean(data_from_this_model.asarray())
 
 
 
-reg_par_list = [1e-4, 5e-4, 1e-3, 5e-3, 1e-2]
-gamma_huber_list = [1e-2, 1e-3, 1e-1]
+reg_par_list = [2.5e-4, 7.5e-4]
+gamma_huber_list = [1e-2]
 
 
 reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Simulated/Balls/dose_6000/gradient_descent_huber_reg'
