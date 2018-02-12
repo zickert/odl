@@ -8,7 +8,7 @@ from odl.contrib import etomo
 from odl.contrib.mrc import FileReaderMRC
 
 # Read phantom and data.
-dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Simulated/Balls/dose_6000')
+dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Simulated/Balls/dose_6000')
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
 file_path_tiltseries = os.path.join(dir_path, 'tiltseries.mrc')
 
@@ -132,7 +132,7 @@ reg_par_list = [1e-4, 5e-4, 1e-3, 5e-3, 1e-2]
 gamma_huber_list = [1e-2, 1e-3, 1e-1]
 
 
-reco_path = '/home/zickert/TEM_reco_project/Reconstructions/Simulated/Balls/dose_6000/gradient_descent_huber_reg_LINEARIZED'
+reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Simulated/Balls/dose_6000/gradient_descent_huber_reg_LINEARIZED'
 
 for gamma_huber in gamma_huber_list:
     for reg_par in reg_par_list:

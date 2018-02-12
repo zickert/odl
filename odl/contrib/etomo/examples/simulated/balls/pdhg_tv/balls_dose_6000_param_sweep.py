@@ -8,7 +8,7 @@ from odl.contrib import etomo
 from odl.contrib.mrc import FileReaderMRC
 
 # Read phantom and data.
-dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Simulated/Balls/dose_6000')
+dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Simulated/Balls/dose_6000')
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
 file_path_tiltseries = os.path.join(dir_path, 'tiltseries.mrc')
 
@@ -136,7 +136,7 @@ data_from_this_model = etomo.buffer_correction(data_from_this_model)
 reg_param_list = [1e-3, 3e-3, 1e-2, 3e-2, 1e-1]
 step_param_list = [1e-4, 1e-3, 1e-2, 1e-1]
 
-reco_path = '/home/zickert/TEM_reco_project/Reconstructions/Simulated/Balls/dose_6000/pdhg_tv_pos_constr'
+reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Simulated/Balls/dose_6000/pdhg_tv_pos_constr'
 
 for reg_param in reg_param_list:
     for step_param in step_param_list:

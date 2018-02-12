@@ -110,22 +110,27 @@ forward_op = imageFormation_op * ray_trafo * mask
 data = forward_op.range.element(np.transpose(data - detector_zero_level,
                                              (2, 0, 1)))
 
+
+lin_op = forward_op(reco_space.zero()) + forward_op.derivative(reco_space.zero())
+
+forward_op = lin_op
+
 #data.show(coords=[0, None, None])
 
 data_bc = etomo.buffer_correction(data)
 
 #data_bc.show(coords=[0, None, None])
 
-data_renormalized = data_bc * np.mean(imageFormation_op(imageFormation_op.domain.zero()).asarray())
+data_renormalized = data_bc * np.mean(forward_op(forward_op.domain.zero()).asarray())
 
 data = data_renormalized
 
 
-reg_par_list = [2.5e-4, 7.5e-4, 1e-3]
-gamma_huber_list = [1e-2, 1e-3]
+reg_par_list = [1e-4, 5e-4, 1e-3, 5e-3, 1e-2]
+gamma_huber_list = [1e-2, 1e-3, 1e-1]
 
 
-reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Experimental/Region1/gradient_descent_huber_reg'
+reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Experimental/Region1/gradient_descent_huber_reg_LINEARIZED'
 
 for gamma_huber in gamma_huber_list:
     for reg_par in reg_par_list:
