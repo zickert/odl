@@ -133,8 +133,8 @@ data_from_this_model = etomo.buffer_correction(data_from_this_model)
 forward_op = lin_op
 
 
-reg_param_list = [1e-3, 3e-3, 1e-2, 3e-2, 1e-1]
-step_param_list = [1e-4, 1e-3, 1e-2, 1e-1]
+reg_param_list = [0.001]
+step_param_list = [0.1, 0.01, 0.001]
 
 reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Simulated/Balls/dose_6000/pdhg_tv_pos_constr_LINEARIZED'
 
@@ -144,7 +144,7 @@ for reg_param in reg_param_list:
         saveto_path = reco_path+'_step_par='+str(step_param)+'_reg_par='+str(reg_param)+'/iterate_{}'
         
         callback = odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
-                                                  step=200, impl='numpy')
+                                                  step=1000, impl='numpy')
     
         
         
@@ -177,7 +177,7 @@ for reg_param in reg_param_list:
         op_norm = 1.1 * 0.067 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
         
         
-        niter = 1001  # Number of iterations
+        niter = 10001  # Number of iterations
         tau = step_param / op_norm  # Step size for the primal variable
         sigma = step_param / op_norm  # Step size for the dual variable
         
