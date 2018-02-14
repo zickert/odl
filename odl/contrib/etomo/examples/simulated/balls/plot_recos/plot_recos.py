@@ -17,9 +17,9 @@ base_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/'
 
 # %%
 
-gamma_huber_list = []
-reg_par_list = []
-iterate = 800
+gamma_huber_list = [0.01]
+reg_par_list = [2.5e-4]
+iterate = 600
 
 for gamma_huber in gamma_huber_list:
     for reg_par in reg_par_list:
@@ -37,7 +37,7 @@ for gamma_huber in gamma_huber_list:
 
 # %%
 gamma_huber_list = [0.01]
-reg_par_list = [1e-4]
+reg_par_list = [1e-3]
 iterate = 1000
 
 for gamma_huber in gamma_huber_list:
@@ -74,10 +74,10 @@ for step_param in step_param_list:
         reco.show(title=method_path+'\n'+param_path, saveto=fig_path)
 
 # %% 
-iterate = 1000
+iterate = 10000
 
-step_param_list = [1e-4, 1e-3, 1e-2, 1e-1]
-reg_param_list = [1e-3, 3e-3, 1e-2, 3e-2, 1e-1]
+step_param_list = [1e-1,1e-2,1e-3]
+reg_param_list = [1e-3]
 
 for step_param in step_param_list:
     for reg_param in reg_param_list:

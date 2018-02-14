@@ -34,3 +34,21 @@ for gamma_huber in gamma_huber_list:
         reco_array = np.load(path)
         reco = reco_space.element(reco_array)
         reco.show(title=method_path+'\n'+param_path, saveto=fig_path)
+
+# %%
+
+gamma_huber_list = [0.01]
+reg_par_list = [0.00025, 0.00075]
+iterate = 1000
+
+for gamma_huber in gamma_huber_list:
+    for reg_par in reg_par_list:
+
+        method_path = 'Experimental/Region1/gradient_descent_huber_reg'
+        param_path = '_gamma='+str(gamma_huber)+'_reg_par='+str(reg_par)+'/iterate_' + str(iterate) 
+        path = base_path + method_path + param_path + '.npy'
+        fig_path = base_path + method_path + param_path
+
+        reco_array = np.load(path)
+        reco = reco_space.element(reco_array)
+        reco.show(title=method_path+'\n'+param_path, saveto=fig_path)
