@@ -192,7 +192,7 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
                           focal_length, aper_rad, aper_angle,
                           mean_energy_spread, acc_voltage, chromatic_abe,
                           abs_phase_ratio=1, obj_magnitude=1,
-                          rescale_factor=1):
+                          rescale_factor=1, keep_real=False):
     """Return image-formation operator.
 
     Parameters
@@ -226,7 +226,8 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
     electron microscope.
     """
     ratio_op = ConstantPhaseAbsRatio(domain, abs_phase_ratio=abs_phase_ratio,
-                                     magnitude_factor=obj_magnitude)
+                                     magnitude_factor=obj_magnitude,
+                                     keep_real=keep_real)
 
     # Create (pointwise) exponential operator.
     exp_op = ExpOperator(ratio_op.range)

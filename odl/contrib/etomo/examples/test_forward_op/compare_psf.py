@@ -1,11 +1,13 @@
 """Electron tomography reconstruction example using data from TEM-Simulator"""
 
+
 import matplotlib.pyplot as plt 
 import numpy as np
 import os
 import odl
 from odl.contrib import etomo
-from odl.contrib.mrc import FileReaderMRC
+from odl.contrib.mrc import (
+    FileReaderMRC, FileWriterMRC, mrc_header_from_params)
 
 # Read phantom and data.
 dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Simulated/Balls/No_noise')
@@ -50,6 +52,8 @@ defocus = 3e-6  # m
 # Set size of detector pixels (before rescaling to account for magnification)
 det_size = 16e-6  # m
 
+det_size /=10
+
 # Reconstruction space: discretized functions on a cuboid
 reco_space = odl.uniform_discr(min_pt=[-rescale_factor*210e-9/4,
                                        -rescale_factor*250e-9/4,
@@ -57,7 +61,7 @@ reco_space = odl.uniform_discr(min_pt=[-rescale_factor*210e-9/4,
                                max_pt=[rescale_factor*210e-9/4,
                                        rescale_factor*250e-9/4,
                                        rescale_factor*40e-9/4],
-                               shape=[210, 250, 40], dtype='float64')
+                               shape=[210, 250, 40], dtype='float32')
 # Make a 3d single-axis parallel beam geometry with flat detector
 # Angles: uniformly spaced, n = 180, min = 0, max = pi
 angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, num_angles,
@@ -91,7 +95,8 @@ imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
                                                 focal_length=focal_length,
                                                 mean_energy_spread=mean_energy_spread,
                                                 acc_voltage=acc_voltage,
-                                                chromatic_abe=chromatic_abe)
+                                                chromatic_abe=chromatic_abe,
+                                                keep_real=True)
 
 phantom = reco_space.element(phantom_asarray)
 
@@ -115,46 +120,47 @@ data = forward_op.range.element(np.transpose(data_asarray, (2, 0, 1)))
 data_from_this_model = etomo.buffer_correction(data_from_this_model,
                                                coords=[[0, 0.1], [0, 0.1]])
 data_from_this_model_lin = etomo.buffer_correction(data_from_this_model_lin,
-                                               coords=[[0, 0.1], [0, 0.1]])
-
-
-nonlinearity = data_from_this_model-data_from_this_model_lin
-mismatch = data-data_from_this_model
-mismatch_lin = data-data_from_this_model_lin 
-# Renormalize data so that it matches "data_from_this_model"
-#data *= np.mean(data_from_this_model_lin.asarray())
+                                                   coords=[[0, 0.1], [0, 0.1]])
 
 #%%
 
-coords = [0, None, None]
+# Compare PSF's of TEM-Simulator and this implementation
 
-data.show(coords=coords, title='TEM-Simulator data')
-data_from_this_model.show(coords=coords, title='data from my op')
-data_from_this_model_lin.show(coords=coords, title='data from my lin op')
-nonlinearity.show(coords=coords, title='nonlinearity')
-mismatch.show(coords=coords, title='mismatch')
-mismatch_lin.show(coords=coords, title='mismatch_lin')
-
-print(str((data-1).norm()))
-print(str(mismatch.norm()))
-print(str(mismatch_lin.norm()))
-
-#%%
-dim_t, dim_x, dim_y = data.shape
-data_asarray = data.asarray()
-
-bg_coords = [[0, 0.1],[0, 0.1]]
+dir_path_ball = os.path.dirname('/home/zickert/odl/odl/contrib/etomo/examples/test_forward_op/test_forward_op.py')
+file_path_ball = os.path.join(dir_path, 'test.mrc')
 
 
-# Pick out background according to coords
-bg = data_asarray[:, round(dim_x*bg_coords[0][0]):round(dim_x*bg_coords[0][1]),
-                  round(dim_y*bg_coords[1][0]):round(dim_y*bg_coords[1][1])]
+space_3d = odl.uniform_discr(min_pt=[-10]*3, max_pt=[10]*3,
+                             shape=(100, 100, 100),
+                             dtype='float32')
+sample_height = 20e-9
+space_3d = reco_space
+radius = 5
+value = 100/(sigma*sample_height)
+cylinder = space_3d.element(lambda x: sum(xi**2 for xi in x[:2]) < radius ** 2)
+cylinder *= value
 
 
+probe = -100/(sigma*sample_height)*reco_space.one()
+probe += cylinder
 
-plt.imshow(bg[60,:,:])
-plt.colorbar()
+# Create a minimal header. All parameters except these here have default
+# values.
+#header = mrc_header_from_params(ball.shape, ball.dtype, kind='volume')
 
-plt.figure()
-plt.imshow(data_asarray[30,:,:])
-plt.colorbar()
+
+#with FileWriterMRC(file_path_ball, header) as writer:
+#    # Write both header and data to the file
+#    writer.write(ball.asarray())
+#
+#with FileReaderMRC(file_path_ball) as reader:
+#    # Get header and data
+#    header, data = reader.read()
+
+#plt.figure()
+#plt.imshow(data[:,:,20], cmap='Greys_r', interpolation='none')
+#plt.show()
+
+cylinder.show(coords = [None,None, -10])
+cylinder_data = forward_op(probe)
+cylinder_data.show(coords = [0,None,None])

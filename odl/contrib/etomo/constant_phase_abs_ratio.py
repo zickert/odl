@@ -8,7 +8,7 @@ __all__ = ('ConstantPhaseAbsRatio',)
 class ConstantPhaseAbsRatio(Operator):
 
     def __init__(self, domain=None, range=None, abs_phase_ratio=1,
-                 magnitude_factor=1):
+                 magnitude_factor=1, keep_real=False):
 
         if domain is None and range is None:
             raise ValueError('either domain or range must be specified.')
@@ -30,6 +30,10 @@ class ConstantPhaseAbsRatio(Operator):
         self.abs_phase_ratio = abs_phase_ratio
         self.magnitude_factor = magnitude_factor
         self.embedding_factor = (1j - self.abs_phase_ratio)*magnitude_factor
+        
+        # For debugging:
+        if keep_real:
+            self.embedding_factor = magnitude_factor
 
     def _call(self, x):
         """Implement ``self(x, out)``."""
