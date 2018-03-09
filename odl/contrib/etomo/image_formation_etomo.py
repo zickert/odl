@@ -7,6 +7,17 @@ from odl.contrib.etomo.intensity_op import IntensityOperator
 __all__ = ('pupil_function', 'modulation_transfer_function',
            'optics_imperfections', 'make_imageFormationOp')
 
+def buffer_contribution(x, **kwargs):
+    """Multiplicative contribution of the ice to the intensity."""
+    angle = x[0]
+    cst_ice_im = 0.8244815
+    sigma = kwargs.pop('sigma')
+    ice_thickness = kwargs.pop('ice_thickness')    
+    result = -2*sigma*cst_ice_im * ice_thickness / np.cos(angle)
+    result = np.exp(result)
+    
+    return result
+
 
 def pupil_function(xi, **kwargs):
     """Indicator function for the disc-shaped aperture, a.k.a. pupil function.
@@ -121,7 +132,7 @@ def source_size_envelope(xi, **kwargs):
     return result
 
 
-def modulation_transfer_function(x, **kwargs):
+def modulation_transfer_function(xi, **kwargs):
     """Function that characterizes the detector response.
 
 
@@ -135,16 +146,19 @@ def modulation_transfer_function(x, **kwargs):
         \\frac{b}{1+\\beta\\|\\xi\\|^2}+c
 
     where :math:`a,b,c,\\alpha` and :math:`\\beta` are real parameters."""
+    axes = kwargs.pop('axes')
     a = kwargs.pop('mtf_a')
     b = kwargs.pop('mtf_b')
     c = kwargs.pop('mtf_c')
     alpha = kwargs.pop('mtf_alpha')
     beta = kwargs.pop('mtf_beta')
     magnification = kwargs.pop('magnification')
+    rescale_factor = kwargs.pop('rescale_factor')
 
-    norm_sq = np.sum(xi ** 2 for xi in x[1:]) / magnification**2
+    norm_sq = np.sum(xi[dim] ** 2 for dim in axes)
+    norm_sq *= (rescale_factor/magnification) ** 2
 
-    result = a / (1 + alpha * norm_sq) + b / (1 + beta * norm_sq) + c
+    result = (a / (1 + alpha * norm_sq)) + (b / (1 + beta * norm_sq)) + c
 
     return result
 
@@ -191,8 +205,12 @@ def optics_imperfections(xi, **kwargs):
 def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
                           focal_length, aper_rad, aper_angle,
                           mean_energy_spread, acc_voltage, chromatic_abe,
+                          dose_per_img, gain, det_area,
+                          ice_thickness, sigma,
                           abs_phase_ratio=1, obj_magnitude=1,
-                          rescale_factor=1, keep_real=False):
+                          rescale_factor=1, mtf_a=0, mtf_b=0,
+                          mtf_c=1, mtf_alpha=0, mtf_beta=0, magnification=1,
+                          keep_real=False):
     """Return image-formation operator.
 
     Parameters
@@ -267,7 +285,7 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
                                     axes=ft_axes,
                                     rescale_factor=rescale_factor)
 
-    ctf = pupil_fun * optics_imperf * energy_env * size_env
+    ctf = 2*np.pi * pupil_fun * optics_imperf * energy_env * size_env
 
 #    pupil_fun.show(coords=[0, None, None])
 #    optics_imperf.show(coords=[0, None, None])
@@ -281,16 +299,22 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
     # Create intensity operator
     intens_op = IntensityOperator(optics_op.range)
 
-    # optics_op_cst = 2*np.pi /(magnification*(2*np.pi)**2)
-    # det_op_cst = det_area * dose_per_img * gain
-    # total_cst = optics_op_cst ** 2 * det_op_cst
-
     # Check behaviour of the MTF
-    # ft_det = odl.trafos.FourierTransform(intens_op.range, axes=[1, 2])
-    # mtf = ft_det.range.element(modulation_transfer_function, mtf_a=mtf_a,
-    #                           mtf_b=mtf_b, mtf_c=mtf_c, mtf_alpha=mtf_alpha,
-    #                           mtf_beta=mtf_beta)
-    # det_op_cst = det_area * dose_per_img * gain
-    # det_op = det_op_cst * ft_det.inverse * mtf * ft_det
+    ft_det = odl.trafos.FourierTransform(intens_op.range, axes=ft_axes)
+    mtf = ft_det.range.element(modulation_transfer_function, mtf_a=mtf_a,
+                               mtf_b=mtf_b, mtf_c=mtf_c, mtf_alpha=mtf_alpha,
+                               mtf_beta=mtf_beta,
+                               rescale_factor=rescale_factor,
+                               magnification=magnification, axes=ft_axes)
+    det_op_cst = 1  # det_area * dose_per_img * gain
 
-    return intens_op * optics_op * exp_op * ratio_op
+    total_cst = dose_per_img
+    total_cst *= gain
+    total_cst *= (1 / (2*np.pi * magnification)) ** 2
+    total_cst *= det_area        
+    det_op = det_op_cst * ft_det.inverse * mtf * ft_det
+
+    buffer_contr = intens_op.range.element(buffer_contribution, sigma=sigma,
+                                           ice_thickness=ice_thickness)
+
+    return total_cst * buffer_contr * intens_op * optics_op * exp_op * ratio_op
