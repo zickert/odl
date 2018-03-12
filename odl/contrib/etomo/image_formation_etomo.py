@@ -5,7 +5,8 @@ from odl.contrib.etomo.constant_phase_abs_ratio import ConstantPhaseAbsRatio
 from odl.contrib.etomo.intensity_op import IntensityOperator
 
 __all__ = ('pupil_function', 'modulation_transfer_function',
-           'optics_imperfections', 'make_imageFormationOp')
+           'optics_imperfections', 'make_imageFormationOp',
+           'buffer_contribution')
 
 def buffer_contribution(x, **kwargs):
     """Multiplicative contribution of the ice to the intensity."""
@@ -13,7 +14,8 @@ def buffer_contribution(x, **kwargs):
     cst_ice_im = 0.8244815
     sigma = kwargs.pop('sigma')
     ice_thickness = kwargs.pop('ice_thickness')    
-    result = -2*sigma*cst_ice_im * ice_thickness / np.cos(angle)
+    #result = -2*sigma*cst_ice_im * ice_thickness / np.cos(angle)
+    result = -0.68*sigma*cst_ice_im * ice_thickness / np.cos(angle)
     result = np.exp(result)
     
     return result
@@ -89,8 +91,8 @@ def energy_spread_envelope(xi, **kwargs):
     C_prime = chromatic_abe * (1+acc_voltage/rest_energy)
     C_prime /= (acc_voltage*(1+acc_voltage/(2*rest_energy)))
 
-    result = mean_energy_spread ** 2 * C_prime ** 2 * norm_sq ** 2
-    result /= (16 * wave_number ** 2)
+    result = (mean_energy_spread ** 2) * (C_prime ** 2) * (norm_sq ** 2)
+    result /= (16 * (wave_number ** 2))
     result = np.exp(-result)
 
     return result
@@ -125,8 +127,8 @@ def source_size_envelope(xi, **kwargs):
     norm_sq = np.sum(xi[dim] ** 2 for dim in axes)
     norm_sq *= rescale_factor ** 2
 
-    result = (aper_angle ** 2 / 4) * norm_sq
-    result *= (defocus - (spherical_abe * norm_sq / wave_number ** 2)) ** 2
+    result = ((aper_angle ** 2 )/ 4) * norm_sq
+    result *= (defocus - (spherical_abe * norm_sq / (wave_number ** 2))) ** 2
     result = np.exp(-result)
 
     return result
@@ -194,9 +196,9 @@ def optics_imperfections(xi, **kwargs):
     # Rescale to account for larger detector in toy examples
     # rescale_factor = (30 / (det_size / magnification * 100)) ** 2
     norm_sq *= rescale_factor ** 2
-    result = - (1 / (4 * wave_number)) * norm_sq * (norm_sq * spherical_abe /
-                                                    wave_number ** 2 - 2 *
-                                                    defocus)
+    result = - (1 / (4 * wave_number)) * norm_sq * ((norm_sq * spherical_abe /
+                                                    (wave_number ** 2)) - (2 *
+                                                    defocus))
     result = np.exp(1j * result)
 
     return result
@@ -205,8 +207,8 @@ def optics_imperfections(xi, **kwargs):
 def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
                           focal_length, aper_rad, aper_angle,
                           mean_energy_spread, acc_voltage, chromatic_abe,
-                          dose_per_img, gain, det_area,
-                          ice_thickness, sigma,
+                          dose_per_img=1, gain=1, det_area=1,
+                          ice_thickness=1, sigma=1,
                           abs_phase_ratio=1, obj_magnitude=1,
                           rescale_factor=1, mtf_a=0, mtf_b=0,
                           mtf_c=1, mtf_alpha=0, mtf_beta=0, magnification=1,
@@ -317,4 +319,8 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
     buffer_contr = intens_op.range.element(buffer_contribution, sigma=sigma,
                                            ice_thickness=ice_thickness)
 
-    return total_cst * buffer_contr * intens_op * optics_op * exp_op * ratio_op
+    # The normalizing constant is given by the forward op. applied to zero.
+    normalizing_cst = (1/(2*np.pi)) **2
+
+    #return total_cst * buffer_contr * intens_op * optics_op * exp_op * ratio_op
+    return normalizing_cst * intens_op * optics_op * exp_op * ratio_op

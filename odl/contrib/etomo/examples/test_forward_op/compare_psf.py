@@ -40,7 +40,7 @@ num_angles = 61
 # Define properties of the optical system
 # Set focal_length to be the focal_length of the principal (first) lens !
 M = 25000.0
-aper_rad = 0.5*40e-6  # m
+aper_rad = 0.5*1000e-6  # m
 focal_length = 2.7e-3  # m
 spherical_abe = 2.1e-3  # m
 chromatic_abe = 2.2e-3  # m
@@ -130,9 +130,6 @@ dir_path_ball = os.path.dirname('/home/zickert/odl/odl/contrib/etomo/examples/te
 file_path_ball = os.path.join(dir_path, 'test.mrc')
 
 
-space_3d = odl.uniform_discr(min_pt=[-10]*3, max_pt=[10]*3,
-                             shape=(100, 100, 100),
-                             dtype='float32')
 sample_height = 20e-9
 space_3d = reco_space
 radius = 5
@@ -140,7 +137,7 @@ value = 100/(sigma*sample_height)
 cylinder = space_3d.element(lambda x: sum(xi**2 for xi in x[:2]) < radius ** 2)
 cylinder *= value
 
-
+# The probe is "the log of a Dirac delta"
 probe = -100/(sigma*sample_height)*reco_space.one()
 probe += cylinder
 
@@ -161,6 +158,6 @@ probe += cylinder
 #plt.imshow(data[:,:,20], cmap='Greys_r', interpolation='none')
 #plt.show()
 
-cylinder.show(coords = [None,None, -10])
+cylinder.show(coords=[None, None, -10])
 cylinder_data = forward_op(probe)
-cylinder_data.show(coords = [0,None,None])
+cylinder_data.show(coords=[0, None, None])

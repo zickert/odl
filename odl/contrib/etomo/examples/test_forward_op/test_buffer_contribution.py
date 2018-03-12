@@ -41,7 +41,7 @@ obj_magnitude = sigma / rescale_factor
 num_angles = 61
 
 
-ice_thickness = 25e-9  # m
+ice_thickness = 50e-9
 
 # Define properties of the optical system
 # Set focal_length to be the focal_length of the principal (first) lens !
@@ -55,7 +55,7 @@ acc_voltage = 200.0e3  # V
 mean_energy_spread = 1.3  # V
 defocus = 3e-6  # m
 gain = 80
-total_dose = 5000e18  # m^-2
+total_dose = 5000e18
 dose_per_img = total_dose / num_angles
 
 # Set size of detector pixels (before rescaling to account for magnification)
@@ -127,9 +127,6 @@ lin_op = forward_op(reco_space.zero())+forward_op.derivative(reco_space.zero())
 bg_cst = np.min(phantom)
 phantom -= bg_cst
 
-my_op_of_zero = (2*np.pi) **2
-
-
 # Create data by calling the forward operator on the phantom
 data_from_this_model = forward_op(phantom)
 data_from_this_model_lin = lin_op(phantom)
@@ -137,61 +134,35 @@ data_from_this_model_lin = lin_op(phantom)
 # Make  a ODL discretized function of the MRC data
 data =  forward_op.range.element(np.transpose(data_asarray, (2, 0, 1)))
 
-# Correct for diffrent pathlenght of the electrons through the buffer
-data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
-
+#Correct for diffrent pathlenght of the electrons through the buffer
+#data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
+#data *= my_op_of_zero
 #data_from_this_model = etomo.buffer_correction(data_from_this_model,
 #                                               coords=[[0, 0.1], [0, 0.1]])
 #data_from_this_model_lin = etomo.buffer_correction(data_from_this_model_lin,
 #                                                   coords=[[0, 0.1], [0, 0.1]])
 
+bg_mean = etomo.buffer_correction(data)
+plt.plot(angle_partition.coord_vectors[0],bg_mean, color='b')
 
-nonlinearity = data_from_this_model-data_from_this_model_lin
-mismatch = data-data_from_this_model
-mismatch_lin = data-data_from_this_model_lin 
-# Renormalize data so that it matches "data_from_this_model"
-#data *= np.mean(data_from_this_model.asarray())/np.mean(data.asarray())
 
-#%%
-coords = [np.pi/3, [-50,-30], [-30,-10]]
-#coords = [0, None, None]
+def buffer_contribution_test(angle, **kwargs):
+    """Multiplicative contribution of the ice to the intensity."""
+    cst_ice_im = 0.8244815
+    sigma = kwargs.pop('sigma')
+    ice_thickness = kwargs.pop('ice_thickness')    
+    result = -0.68*sigma*cst_ice_im * ice_thickness / np.cos(angle)
+    result = np.exp(result)
+    
+    return result
 
-(data-np.mean(data)).show(coords=coords, title='TEM-Simulator data')
-(data_from_this_model-np.mean(data_from_this_model)).show(coords=coords, title='data from my op')
-(data_from_this_model_lin-np.mean(data_from_this_model_lin)).show(coords=coords, title='data from my lin op')
-nonlinearity.show(coords=coords, title='nonlinearity')
-mismatch.show(coords=coords, title='mismatch')
-mismatch_lin.show(coords=coords, title='mismatch_lin')
+plt.show()
 
-print(str(((data-np.mean(data)).norm())))
-print(str(mismatch.norm()))
-print(str(mismatch_lin.norm()))
+bg_mean_this_model = buffer_contribution_test(angle_partition.coord_vectors[0], sigma=sigma, 
+                                               ice_thickness=ice_thickness)
 
-#
-#data_zero_tilt = (data).asarray()[30,:,:]
-#data_max_tilt = (data).asarray()[60,:,:]
-#mismatch_zero_tilt = mismatch.asarray()[30,:,:]
-#mismatch_max_tilt = mismatch.asarray()[60,:,:]
-#
-#print(str(np.linalg.norm(data_zero_tilt)))
-#print(str(np.linalg.norm(mismatch_zero_tilt)))
-#print(str(np.linalg.norm(data_max_tilt)))
-#print(str(np.linalg.norm(mismatch_max_tilt)))
-#
-#mismatch_zero_tilt_cropped = mismatch_zero_tilt[:30,:30]
-#mismatch_max_tilt_cropped = mismatch_max_tilt[:30,:30]
-#
-#plt.figure()
-#plt.imshow(mismatch_zero_tilt)
-#plt.colorbar()
-#plt.figure()
-#plt.imshow(mismatch_max_tilt)
-#plt.colorbar()
-#
-#plt.figure()
-#plt.imshow(mismatch_zero_tilt_cropped)
-#plt.colorbar()
-#plt.figure()
-#plt.imshow(mismatch_max_tilt_cropped)
-#plt.colorbar()
+bg_mean_this_model *= (np.mean(bg_mean)/np.mean(bg_mean_this_model))
+
+
+plt.plot(angle_partition.coord_vectors[0],bg_mean_this_model, color='r')
 
