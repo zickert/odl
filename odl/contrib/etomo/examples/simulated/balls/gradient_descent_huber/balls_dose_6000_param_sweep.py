@@ -11,7 +11,7 @@ from odl.contrib.mrc import FileReaderMRC
 dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Simulated/Balls/dose_6000')
 
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
-file_path_tiltseries = os.path.join(dir_path, 'tiltseries.mrc')
+file_path_tiltseries = os.path.join(dir_path, 'tiltseries_perfect_mtf.mrc')
 
 with FileReaderMRC(file_path_phantom) as phantom_reader:
     phantom_header, phantom_asarray = phantom_reader.read()
@@ -98,34 +98,13 @@ phantom = reco_space.element(phantom_asarray)
 # Define forward operator as a composition
 forward_op = imageFormation_op * ray_trafo
 
-lin_op = 1+forward_op.derivative(reco_space.zero())
-#forward_op(phantom).show(coords=[0, None, None])
-#lin_op(phantom).show(coords=[0, None, None])
-
-
-# remove background
-bg_cst = np.min(phantom)
-phantom -= bg_cst
-
-# Create data by calling the forward operator on the phantom
-data_from_this_model = forward_op(phantom)
-
-
 # Make  a ODL discretized function of the MRC data
 data = forward_op.range.element(np.transpose(data_asarray, (2, 0, 1)))
 
 # Correct for diffrent pathlenght of the electrons through the buffer
 data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
-data_from_this_model = etomo.buffer_correction(data_from_this_model)
 
-# Plot corrected data
-#data_from_this_model.show(coords=[0, None, None])
-#data.show(coords=[0, None, None])
-
-# Renormalize data so that it matches "data_from_this_model"
-data *= np.mean(data_from_this_model.asarray())
-
-
+#%%
 
 reg_par_list = [2.5e-4, 7.5e-4]
 gamma_huber_list = [1e-2]

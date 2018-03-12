@@ -1,8 +1,5 @@
 """Electron tomography reconstruction example using data from TEM-Simulator"""
 
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt 
 import numpy as np
 import os
 import odl
@@ -10,9 +7,9 @@ from odl.contrib import etomo
 from odl.contrib.mrc import FileReaderMRC
 
 # Read phantom and data.
-dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/Simulated/Balls/dose_6000')
+dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Simulated/Balls/dose_6000')
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
-file_path_tiltseries = os.path.join(dir_path, 'tiltseries.mrc')
+file_path_tiltseries = os.path.join(dir_path, 'tiltseries_perfect_mtf.mrc')
 
 with FileReaderMRC(file_path_phantom) as phantom_reader:
     phantom_header, phantom_asarray = phantom_reader.read()
@@ -35,15 +32,11 @@ sigma = e_mass * e_charge / (wave_number * planck_bar ** 2)
 
 abs_phase_ratio = 0.1
 obj_magnitude = sigma / rescale_factor
-regpar = 3e3
-gamma_H1 = 0.9
+regpar = 2e3
+gamma_H1 = 0.95
 num_angles = 61
 num_angles_per_block = 1
 num_cycles = 3
-
-# Define sample diameter and height. We take flat sample
-sample_diam = 1200e-9  # m
-sample_height = 150e-9  # m
 
 # Define properties of the optical system
 # Set focal_length to be the focal_length of the principal (first) lens !
@@ -106,30 +99,26 @@ imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
 
 # Define forward operator as a composition
 forward_op = imageFormation_op * ray_trafo
+
 phantom = reco_space.element(phantom_asarray)
 
-# remove background
 bg_cst = np.min(phantom)
 phantom -= bg_cst
-
-# Create data by calling the forward operator on the phantom
-data_from_this_model = forward_op(phantom)
 
 # Make  a ODL discretized function of the MRC data
 data = forward_op.range.element(np.transpose(data_asarray, (2, 0, 1)))
 
+
+noise_cst = (6000e18/61)*80*det_size**2/(25000**2)
+
 # Correct for diffrent pathlenght of the electrons through the buffer
 data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
-data_from_this_model = etomo.buffer_correction(data_from_this_model)
 
-# Plot corrected data
-data_from_this_model.show(coords=[0, None, None])
-data.show(coords=[0, None, None])
 
-# Renormalize data so that it matches "data_from_this_model"
-data *= np.mean(data_from_this_model.asarray())
+data=forward_op(phantom)
 
-#data = data_from_this_model
+noisy_data = odl.phantom.poisson_noise(data*noise_cst)
+noisy_data.show(title='my own noise', coords = [0,None,None])
 
 # %% RECONSTRUCTION
 reco = ray_trafo.domain.zero()
@@ -183,25 +172,15 @@ etomo.kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
 # etomo.plot_3d_ortho_slices(reco)
 
 # Save planes of reco (orthogonal to x,y and z axes)
-dose_5000_reco_fig_x = reco.show(title='balls_dose_5000_reco_x',
-                                 coords=[0, None, None])
-dose_5000_reco_fig_x.savefig('balls_dose_5000_reco_x')
+#dose_5000_reco_fig_x = reco.show(title='balls_dose_5000_reco_x',
+#                                 coords=[0, None, None])
+#dose_5000_reco_fig_x.savefig('balls_dose_5000_reco_x')
+#
+#dose_5000_reco_fig_y = reco.show(title='balls_dose_5000_reco_y',
+#                                 coords=[None, 0, None])
+#dose_5000_reco_fig_y.savefig('balls_dose_5000_reco_y')
+#
+#dose_5000_reco_fig_z = reco.show(title='balls_dose_5000_reco_z',
+#                                 coords=[None, None, 0])
+#dose_5000_reco_fig_z.savefig('balls_dose_5000_reco_z')
 
-dose_5000_reco_fig_y = reco.show(title='balls_dose_5000_reco_y',
-                                 coords=[None, 0, None])
-dose_5000_reco_fig_y.savefig('balls_dose_5000_reco_y')
-
-dose_5000_reco_fig_z = reco.show(title='balls_dose_5000_reco_z',
-                                 coords=[None, None, 0])
-dose_5000_reco_fig_z.savefig('balls_dose_5000_reco_z')
-
-
-#%% 
-reco = ray_trafo.domain.zero()
-callback = (odl.solvers.CallbackPrintIteration() &
-            odl.solvers.CallbackShow())
-
-#Landweber iterations
-nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
-
-odl.solvers.landweber(forward_op, reco, data, 1000, omega=3e1, callback=callback,projection=nonneg_projection)

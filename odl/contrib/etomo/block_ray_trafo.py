@@ -1,11 +1,11 @@
 import odl
 from odl.tomo import RayTransform
+import numpy as np
 
 __all__ = ('BlockRayTransform',)
 
 
 class BlockRayTransform(RayTransform):
-
     """Ray transform as a block operator."""
 
     def __init__(self, domain, geometry, **kwargs):
@@ -13,8 +13,25 @@ class BlockRayTransform(RayTransform):
 
     def get_sub_operator(self, sub_op_idx):
         """Return a block of the ray transform."""
-        return odl.tomo.RayTransform(self.domain, self.geometry[sub_op_idx])
-
+        
+        if np.size(sub_op_idx) != 1:
+        
+            return odl.tomo.RayTransform(self.domain,
+                                         self.geometry[sub_op_idx])
+        else:
+            # Hack for defining Ray-trafo with single-angle geometry
+            angle = self.geometry.angles[sub_op_idx[0]]
+            angle_increment = self.geometry.angles[1] - self.geometry.angles[0]
+            apart = odl.uniform_partition(angle, angle+angle_increment, 1,
+                                          nodes_on_bdry=(True,False))
+            dpart = self.geometry.det_partition
+            geom = odl.tomo.Parallel3dAxisGeometry(apart,
+                                                   dpart,
+                                                   axis=self.geometry.axis,
+                                                   det_pos_init=self.geometry._det_pos_init_arg,
+                                                   det_axes_init=self.geometry._det_axes_init_arg,
+                                                   translation=self.geometry.translation)
+            return odl.tomo.RayTransform(self.domain, geom)
 
 if __name__ == '__main__':
     import numpy as np
