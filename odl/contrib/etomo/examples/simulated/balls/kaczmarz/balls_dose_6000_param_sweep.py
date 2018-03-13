@@ -132,8 +132,8 @@ data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
 
 # %% RECONSTRUCTION
 
-reg_param_list = [3e3]
-gamma_H1_list = [0.9]
+reg_param_list = [3e2, 3e3, 3e4]
+gamma_H1_list = [0.8, 0.9, 0.95, 0.99]
 Niter_CG_list = [30]
 
 reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Simulated/Balls/dose_6000/kaczmarz'
