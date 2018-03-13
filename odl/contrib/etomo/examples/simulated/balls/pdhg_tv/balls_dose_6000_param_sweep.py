@@ -10,12 +10,12 @@ from odl.contrib.mrc import FileReaderMRC
 # Read phantom and data.
 dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Simulated/Balls/dose_6000')
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
-file_path_tiltseries = os.path.join(dir_path, 'tiltseries_perfect_mtf.mrc')
+#file_path_tiltseries = os.path.join(dir_path, 'tiltseries_perfect_mtf_perfect_dqe.mrc')
 
 with FileReaderMRC(file_path_phantom) as phantom_reader:
     phantom_header, phantom_asarray = phantom_reader.read()
-with FileReaderMRC(file_path_tiltseries) as tiltseries_reader:
-    tiltseries_header, data_asarray = tiltseries_reader.read()
+#with FileReaderMRC(file_path_tiltseries) as tiltseries_reader:
+#    tiltseries_header, data_asarray = tiltseries_reader.read()
 
 # The reconstruction space will be rescaled according to rescale_factor in
 # order to avoid numerical issues related to having a very small reco space.
@@ -35,6 +35,8 @@ abs_phase_ratio = 0.1
 obj_magnitude = sigma / rescale_factor
 num_angles = 61
 
+ice_thickness = 50e-9
+
 # Define properties of the optical system
 # Set focal_length to be the focal_length of the principal (first) lens !
 M = 25000.0
@@ -46,6 +48,13 @@ aper_angle = 0.1e-3  # rad
 acc_voltage = 200.0e3  # V
 mean_energy_spread = 1.3  # V
 defocus = 3e-6  # m
+gain = 80
+total_dose = 6000e18  # m^-2
+dose_per_img = total_dose / num_angles
+
+# Set size of detector pixels (before rescaling to account for magnification)
+det_size = 16e-6  # m
+det_area = det_size ** 2
 
 # Set size of detector pixels (before rescaling to account for magnification)
 det_size = 16e-6  # m
@@ -91,18 +100,32 @@ imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
                                                 focal_length=focal_length,
                                                 mean_energy_spread=mean_energy_spread,
                                                 acc_voltage=acc_voltage,
-                                                chromatic_abe=chromatic_abe)
-
-phantom = reco_space.element(phantom_asarray)
+                                                chromatic_abe=chromatic_abe,
+                                                normalize=True)
 
 # Define forward operator as a composition
 forward_op = imageFormation_op * ray_trafo
 
+phantom = reco_space.element(phantom_asarray)
 
-# Make  a ODL discretized function of the MRC data
-data = forward_op.range.element(np.transpose(data_asarray, (2, 0, 1)))
+# We remove the background from the phantom
+bg_cst = np.min(phantom)
+phantom -= bg_cst
 
-# Correct for diffrent pathlenght of the electrons through the buffer
+# Create data by calling forward op on phantom
+data = forward_op(phantom)
+
+# Add noise
+total_cst = dose_per_img
+total_cst *= (1 / M) ** 2
+total_cst *= det_area
+buffer_contr = data.space.element(etomo.buffer_contribution,
+                                  sigma=sigma,
+                                  ice_thickness=ice_thickness)
+data = total_cst * buffer_contr * data
+data = gain * odl.phantom.poisson_noise(data)
+
+# Correct for different path-lengths through the buffer
 data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
 
 # %%

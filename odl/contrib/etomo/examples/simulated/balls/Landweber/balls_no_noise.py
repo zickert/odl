@@ -12,7 +12,7 @@ from odl.contrib.mrc import FileReaderMRC
 # Read phantom and data.
 dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Simulated/Balls/No_noise')
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
-file_path_tiltseries = os.path.join(dir_path, 'tiltseries_perfect_mtf.mrc')
+file_path_tiltseries = os.path.join(dir_path, 'tiltseries_perfect_mtf_perfect_dqe.mrc')
 
 with FileReaderMRC(file_path_phantom) as phantom_reader:
     phantom_header, phantom_asarray = phantom_reader.read()

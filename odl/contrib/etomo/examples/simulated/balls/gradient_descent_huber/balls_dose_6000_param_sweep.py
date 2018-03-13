@@ -11,12 +11,12 @@ from odl.contrib.mrc import FileReaderMRC
 dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Simulated/Balls/dose_6000')
 
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
-file_path_tiltseries = os.path.join(dir_path, 'tiltseries_perfect_mtf.mrc')
+#file_path_tiltseries = os.path.join(dir_path, 'tiltseries_perfect_mtf_perfect_dqe.mrc')
 
 with FileReaderMRC(file_path_phantom) as phantom_reader:
     phantom_header, phantom_asarray = phantom_reader.read()
-with FileReaderMRC(file_path_tiltseries) as tiltseries_reader:
-    tiltseries_header, data_asarray = tiltseries_reader.read()
+#with FileReaderMRC(file_path_tiltseries) as tiltseries_reader:
+#    tiltseries_header, data_asarray = tiltseries_reader.read()
 
 # The reconstruction space will be rescaled according to rescale_factor in
 # order to avoid numerical issues related to having a very small reco space.

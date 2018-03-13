@@ -41,7 +41,7 @@ obj_magnitude = sigma / rescale_factor
 num_angles = 61
 
 
-ice_thickness = 25e-9  # m
+ice_thickness = 50e-9  # m
 
 # Define properties of the optical system
 # Set focal_length to be the focal_length of the principal (first) lens !
@@ -53,7 +53,7 @@ chromatic_abe = 2.2e-3  # m
 aper_angle = 0.1e-3  # rad
 acc_voltage = 200.0e3  # V
 mean_energy_spread = 1.3  # V
-defocus = 3e-6  # m
+defocus = 3e-6 # m
 gain = 80
 total_dose = 5000e18  # m^-2
 dose_per_img = total_dose / num_angles
@@ -113,7 +113,7 @@ imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
                                                 gain=gain,
                                                 det_area=det_area,
                                                 ice_thickness=ice_thickness,
-                                                sigma=sigma)
+                                                sigma=sigma, normalize=True)
 
 phantom = reco_space.element(phantom_asarray)
 phantom_im = reco_space.element(phantom_im_asarray)

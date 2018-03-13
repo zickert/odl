@@ -9,12 +9,12 @@ from odl.contrib.mrc import FileReaderMRC
 # Read phantom and data.
 dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Simulated/Balls/dose_6000')
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
-file_path_tiltseries = os.path.join(dir_path, 'tiltseries_perfect_mtf_perfect_dqe.mrc')
+#file_path_tiltseries = os.path.join(dir_path, 'tiltseries_perfect_mtf_perfect_dqe.mrc')
 
 with FileReaderMRC(file_path_phantom) as phantom_reader:
     phantom_header, phantom_asarray = phantom_reader.read()
-with FileReaderMRC(file_path_tiltseries) as tiltseries_reader:
-    tiltseries_header, data_asarray = tiltseries_reader.read()
+#with FileReaderMRC(file_path_tiltseries) as tiltseries_reader:
+#    tiltseries_header, data_asarray = tiltseries_reader.read()
 
 # The reconstruction space will be rescaled according to rescale_factor in
 # order to avoid numerical issues related to having a very small reco space.
@@ -32,15 +32,13 @@ sigma = e_mass * e_charge / (wave_number * planck_bar ** 2)
 
 abs_phase_ratio = 0.1
 obj_magnitude = sigma / rescale_factor
-regpar = 3e3
-gamma_H1 = 0.9
+#regpar = 3e3
+#gamma_H1 = 0.9
 num_angles = 61
 num_angles_per_block = 1
 num_cycles = 3
 
-
 ice_thickness = 50e-9
-
 
 # Define properties of the optical system
 # Set focal_length to be the focal_length of the principal (first) lens !
@@ -133,67 +131,69 @@ data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
 
 
 # %% RECONSTRUCTION
-reco = ray_trafo.domain.zero()
-callback = (odl.solvers.CallbackPrintIteration() &
-            odl.solvers.CallbackShow())
 
-kaczmarz_plan = etomo.make_kaczmarz_plan(num_angles,
-                                         block_length=num_angles_per_block,
-                                         method='random')
+reg_param_list = [3e3]
+gamma_H1_list = [0.9]
+Niter_CG_list = [30]
 
-ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
+reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Simulated/Balls/dose_6000/kaczmarz'
 
-F_post = etomo.make_imageFormationOp(ray_trafo_block.range,
-                                     wave_number, spherical_abe,
-                                     defocus,
-                                     rescale_factor=rescale_factor,
-                                     obj_magnitude=obj_magnitude,
-                                     abs_phase_ratio=abs_phase_ratio,
-                                     aper_rad=aper_rad, aper_angle=aper_angle,
-                                     focal_length=focal_length,
-                                     mean_energy_spread=mean_energy_spread,
-                                     acc_voltage=acc_voltage,
-                                     chromatic_abe=chromatic_abe,
-                                     normalize=True)
+for reg_param in reg_param_list:
+    for gamma_H1 in gamma_H1_list:
+        for Niter_CG in Niter_CG_list:
 
-#F_pre = odl.MultiplyOperator(mask, reco_space, reco_space)
-# we skip the mask for the Balls phantom
-F_pre = odl.IdentityOperator(reco_space)
+            saveto_path = reco_path+'_gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG'+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'/iterate_{}'
+            
+            callback = odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
+                                                      step=num_angles*num_cycles-1,
+                                                      impl='numpy')
+        
+    
+            reco = ray_trafo.domain.zero()
+            
+            kaczmarz_plan = etomo.make_kaczmarz_plan(num_angles,
+                                                     block_length=num_angles_per_block,
+                                                     method='random')
+            
+            ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
+            
+            F_post = etomo.make_imageFormationOp(ray_trafo_block.range,
+                                                 wave_number, spherical_abe,
+                                                 defocus,
+                                                 rescale_factor=rescale_factor,
+                                                 obj_magnitude=obj_magnitude,
+                                                 abs_phase_ratio=abs_phase_ratio,
+                                                 aper_rad=aper_rad,
+                                                 aper_angle=aper_angle,
+                                                 focal_length=focal_length,
+                                                 mean_energy_spread=mean_energy_spread,
+                                                 acc_voltage=acc_voltage,
+                                                 chromatic_abe=chromatic_abe,
+                                                 normalize=True)
+            
 
+            F_pre = odl.IdentityOperator(reco_space)
+            
+            
+            get_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
+                                          Op_post=F_post)
+            get_data = etomo.make_data_blocks(data, kaczmarz_plan)
+            
+            # Optional nonnegativity-constraint
+            nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
+            
+            
+            reco = reco_space.zero()
+            get_proj_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo,
+                                               Op_pre=F_pre,
+                                               Op_post=None)
+            
+            etomo.kaczmarz_SART_method(get_proj_op, reco, get_data,
+                                       len(kaczmarz_plan),
+                                       reg_param*obj_magnitude ** 2,
+                                       imageFormationOp=F_post, gamma_H1=gamma_H1,
+                                       niter_CG=Niter_CG, callback=callback,
+                                       num_cycles=num_cycles,
+                                       projection=nonneg_projection)
 
-get_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
-                              Op_post=F_post)
-get_data = etomo.make_data_blocks(data, kaczmarz_plan)
-
-# Optional nonnegativity-constraint
-nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
-
-
-reco = reco_space.zero()
-get_proj_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
-                                   Op_post=None)
-
-etomo.kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
-                           regpar*obj_magnitude ** 2,
-                           imageFormationOp=F_post, gamma_H1=gamma_H1,
-                           niter_CG=30, callback=callback,
-                           num_cycles=num_cycles, projection=nonneg_projection)
-
-
-# Plot results
-# etomo.plot_3d_ortho_slices(phantom)
-# etomo.plot_3d_ortho_slices(reco)
-
-# Save planes of reco (orthogonal to x,y and z axes)
-#dose_5000_reco_fig_x = reco.show(title='balls_dose_5000_reco_x',
-#                                 coords=[0, None, None])
-#dose_5000_reco_fig_x.savefig('balls_dose_5000_reco_x')
-#
-#dose_5000_reco_fig_y = reco.show(title='balls_dose_5000_reco_y',
-#                                 coords=[None, 0, None])
-#dose_5000_reco_fig_y.savefig('balls_dose_5000_reco_y')
-#
-#dose_5000_reco_fig_z = reco.show(title='balls_dose_5000_reco_z',
-#                                 coords=[None, None, 0])
-#dose_5000_reco_fig_z.savefig('balls_dose_5000_reco_z')
 

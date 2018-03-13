@@ -10,7 +10,7 @@ from odl.contrib.mrc import FileReaderMRC
 # Read phantom and data.
 dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Simulated/Balls/No_noise')
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
-file_path_tiltseries = os.path.join(dir_path, 'tiltseries_perfect_mtf.mrc')
+file_path_tiltseries = os.path.join(dir_path, 'tiltseries_perfect_mtf_perfect_dqe.mrc')
 
 with FileReaderMRC(file_path_phantom) as phantom_reader:
     phantom_header, phantom_asarray = phantom_reader.read()
@@ -98,7 +98,8 @@ imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
                                                 focal_length=focal_length,
                                                 mean_energy_spread=mean_energy_spread,
                                                 acc_voltage=acc_voltage,
-                                                chromatic_abe=chromatic_abe)
+                                                chromatic_abe=chromatic_abe,
+                                                normalize=True)
 
 # Define forward operator as a composition
 forward_op = imageFormation_op * ray_trafo
@@ -114,7 +115,7 @@ data = forward_op.range.element(np.transpose(data_asarray, (2, 0, 1)))
 # Correct for diffrent pathlenght of the electrons through the buffer
 data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
 
-#data=forward_op(phantom)
+data=forward_op(phantom)
 
 # %% RECONSTRUCTION
 reco = ray_trafo.domain.zero()
@@ -137,7 +138,8 @@ F_post = etomo.make_imageFormationOp(ray_trafo_block.range,
                                      focal_length=focal_length,
                                      mean_energy_spread=mean_energy_spread,
                                      acc_voltage=acc_voltage,
-                                     chromatic_abe=chromatic_abe)
+                                     chromatic_abe=chromatic_abe,
+                                     normalize=True)
 F_pre = odl.IdentityOperator(reco_space)
 
 

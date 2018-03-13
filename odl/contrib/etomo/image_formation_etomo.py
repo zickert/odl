@@ -212,7 +212,8 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
                           abs_phase_ratio=1, obj_magnitude=1,
                           rescale_factor=1, mtf_a=0, mtf_b=0,
                           mtf_c=1, mtf_alpha=0, mtf_beta=0, magnification=1,
-                          keep_real=False):
+                          keep_real=False, use_buffer_contr=False,
+                          normalize=False):
     """Return image-formation operator.
 
     Parameters
@@ -289,11 +290,11 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
 
     ctf = 2*np.pi * pupil_fun * optics_imperf * energy_env * size_env
 
-#    pupil_fun.show(coords=[0, None, None])
-#    optics_imperf.show(coords=[0, None, None])
-#    energy_env.show(coords=[0, None, None])
-#    size_env.show(coords=[0, None, None])
-#    ctf.show(coords=[0, None, None])
+    #    pupil_fun.show(coords=[0, None, None])
+    #    optics_imperf.show(coords=[0, None, None])
+    #    energy_env.show(coords=[0, None, None])
+    #    size_env.show(coords=[0, None, None])
+    #    ctf.show(coords=[0, None, None])
 
     # The optics operator is a multiplication in frequency-space
     optics_op = ft_ctf.inverse * ctf * ft_ctf
@@ -302,25 +303,36 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
     intens_op = IntensityOperator(optics_op.range)
 
     # Check behaviour of the MTF
-    ft_det = odl.trafos.FourierTransform(intens_op.range, axes=ft_axes)
-    mtf = ft_det.range.element(modulation_transfer_function, mtf_a=mtf_a,
-                               mtf_b=mtf_b, mtf_c=mtf_c, mtf_alpha=mtf_alpha,
-                               mtf_beta=mtf_beta,
-                               rescale_factor=rescale_factor,
-                               magnification=magnification, axes=ft_axes)
-    det_op_cst = 1  # det_area * dose_per_img * gain
+    #    ft_det = odl.trafos.FourierTransform(intens_op.range, axes=ft_axes)
+    #    mtf = ft_det.range.element(modulation_transfer_function, mtf_a=mtf_a,
+    #                               mtf_b=mtf_b, mtf_c=mtf_c, mtf_alpha=mtf_alpha,
+    #                               mtf_beta=mtf_beta,
+    #                               rescale_factor=rescale_factor,
+    #                               magnification=magnification, axes=ft_axes)
+    #    det_op_cst = 1  # det_area * dose_per_img * gain
+    #    det_op = det_op_cst * ft_det.inverse * mtf * ft_det
 
-    total_cst = dose_per_img
-    total_cst *= gain
-    total_cst *= (1 / (2*np.pi * magnification)) ** 2
-    total_cst *= det_area        
-    det_op = det_op_cst * ft_det.inverse * mtf * ft_det
+    if use_buffer_contr:
+        total_cst = dose_per_img
+    #    We should not multiply with gain here, but after Poisson noise is added!
+    #    total_cst *= gain
+        total_cst *= (1 / (2*np.pi * magnification)) ** 2
+        total_cst *= det_area        
+    
+        buffer_contr = intens_op.range.element(buffer_contribution,
+                                               sigma=sigma,
+                                               ice_thickness=ice_thickness)
+        return total_cst * buffer_contr * intens_op * optics_op * exp_op * ratio_op
 
-    buffer_contr = intens_op.range.element(buffer_contribution, sigma=sigma,
-                                           ice_thickness=ice_thickness)
 
-    # The normalizing constant is given by the forward op. applied to zero.
-    normalizing_cst = (1/(2*np.pi)) **2
+    elif normalize:
+        # The normalizing constant is given by the forward op. applied to zero.
+        # Data generated with this setting enabled need to be buffer corrected.
+        normalizing_cst = (1/(2*np.pi)) **2
+    
+        return normalizing_cst * intens_op * optics_op * exp_op * ratio_op
+    
+    else:
 
-    #return total_cst * buffer_contr * intens_op * optics_op * exp_op * ratio_op
-    return normalizing_cst * intens_op * optics_op * exp_op * ratio_op
+        return intens_op * optics_op * exp_op * ratio_op
+    
