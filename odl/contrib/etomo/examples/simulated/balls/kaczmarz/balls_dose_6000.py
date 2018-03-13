@@ -139,7 +139,7 @@ callback = (odl.solvers.CallbackPrintIteration() &
 
 kaczmarz_plan = etomo.make_kaczmarz_plan(num_angles,
                                          block_length=num_angles_per_block,
-                                         method='random')
+                                         method='mls')
 
 ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 

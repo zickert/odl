@@ -142,7 +142,7 @@ for reg_param in reg_param_list:
     for gamma_H1 in gamma_H1_list:
         for Niter_CG in Niter_CG_list:
 
-            saveto_path = reco_path+'_gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG'+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'/iterate_{}'
+            saveto_path = reco_path+'_gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'/iterate_{}'
             
             callback = odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
                                                       step=num_angles*num_cycles-1,
@@ -153,7 +153,7 @@ for reg_param in reg_param_list:
             
             kaczmarz_plan = etomo.make_kaczmarz_plan(num_angles,
                                                      block_length=num_angles_per_block,
-                                                     method='random')
+                                                     method='mls')
             
             ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
             
