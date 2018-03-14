@@ -108,44 +108,61 @@ data = forward_op.range.element(np.transpose(data - detector_zero_level,
 data = etomo.buffer_correction(data)
 #%%
 
-reg_par_list = [2.5e-4, 3.75e-4, 5e-4, 6.25e-4, 7.5e-4]
-gamma_huber_list = [1e-2]
-maxiter = 1001
+reg_param_list = [1e-4, 3e-4, 1e-3, 3e-3]
+step_param_list = [1e-3, 1e-2, 1e-1]
+niter = 1001  # Number of iterations
+steps_to_save = 1000
 
-reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Experimental/Region1/gradient_descent_huber_reg'
+reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Experimental/Region1/pdhg_tv_pos_constr'
 
 start = time()
 
-for gamma_huber in gamma_huber_list:
-    print('gamma_huber='+str(gamma_huber))
-
-    for reg_par in reg_par_list:
-        print('reg_par='+str(reg_par))
+for reg_param in reg_param_list:
+    print('reg_param='+str(reg_param))
+    for step_param in step_param_list:
+        print('step_param='+str(step_param))
         print('time: '+str(timedelta(seconds=time()-start)))
+
     
-        saveto_path = reco_path+'/_gamma='+str(gamma_huber)+'_reg_par='+str(reg_par)+'_iterate_{}'
+        saveto_path = reco_path+'/step_par='+str(step_param)+'_reg_par='+str(reg_param)+'_iterate_{}'
         
         callback = odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
-                                                  step=1000, impl='numpy')
+                                                  step=steps_to_save, impl='numpy')
     
-        reco = reco_space.zero()
-    
-        nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
-    
-    
+
+        # Initialize gradient operator
         gradient = odl.Gradient(reco_space)
-        huber_func = odl.solvers.Huber(gradient.range, gamma=gamma_huber)
-        TV_smothened = huber_func * gradient
-    
+        
+        # Column vector of two operators
+        op = odl.BroadcastOperator(forward_op, gradient)
+        
+        # Do not use the g functional, set it to zero.
+        g = odl.solvers.IndicatorNonnegativity(reco_space)
+        
+        # Create functionals for the dual variable
+        
         # l2-squared data matching
         l2_norm = odl.solvers.L2NormSquared(forward_op.range).translated(data)
-    
-        # reg_par = 0.01
-    
-        f = l2_norm * forward_op + reg_par * TV_smothened
-    
-        ls = odl.solvers.BacktrackingLineSearch(f)
-    
-        odl.solvers.steepest_descent(f, reco, line_search=ls, maxiter=maxiter,
-                                     callback=callback,
-                                     projection=nonneg_projection)
+        
+        # Isotropic TV-regularization i.e. the l1-norm
+        l1_norm = reg_param * odl.solvers.GroupL1Norm(gradient.range)
+        
+        # Combine functionals, order must correspond to the operator K
+        f = odl.solvers.SeparableSum(l2_norm, l1_norm)
+        
+        # --- Select solver parameters and solve using PDHG --- #
+        
+        # Estimated operator norm, add 10 percent to ensure ||K||_2^2 * sigma * tau < 1
+        op_norm = 1.1 * 0.024448060645880614 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
+
+        tau = step_param / op_norm  # Step size for the primal variable
+        sigma = step_param / op_norm  # Step size for the dual variable
+
+        # Choose a starting point
+        x = reco_space.zero()
+        
+        # Run the algorithm
+        odl.solvers.pdhg(x, f, g, op, tau=tau, sigma=sigma, niter=niter,
+                         callback=callback)
+
+

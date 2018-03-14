@@ -46,14 +46,11 @@ for reg_param in reg_param_list:
            
             reco_array = np.load(path)
             reco = reco_space.element(reco_array)
-            print('reg_param='+str(reg_param))
-            print('gamma_H1='+str(gamma_H1))
-            print('Niter_CG='+str(Niter_CG))
-            print('SSIM='+str(ssim(phantom.asarray(), reco.asarray())))
-            print('PSNR='+str(psnr(phantom.asarray(), reco.asarray(),
-                                           dynamic_range=np.max(phantom) - np.min(phantom))))
-            print()
-            
+            reco.show(title=method_path+'\n'+param_path+'\n'
+                      +'SSIM='+str(ssim(phantom.asarray(), reco.asarray()))
+                      +', PSNR='+str(psnr(phantom.asarray(), reco.asarray(),
+                                               dynamic_range=np.max(phantom) - np.min(phantom))))
+                
 
 # %%
 iterate = 1000

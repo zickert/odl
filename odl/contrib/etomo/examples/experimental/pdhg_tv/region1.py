@@ -157,6 +157,3 @@ callback = (odl.solvers.CallbackPrintIteration(step=10) &
 odl.solvers.pdhg(x, f, g, op, tau=tau, sigma=sigma, niter=niter,
                  callback=callback)
 
-
-# -*- coding: utf-8 -*-
-

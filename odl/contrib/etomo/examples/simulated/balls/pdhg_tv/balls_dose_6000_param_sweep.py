@@ -58,9 +58,6 @@ dose_per_img = total_dose / num_angles
 det_size = 16e-6  # m
 det_area = det_size ** 2
 
-# Set size of detector pixels (before rescaling to account for magnification)
-det_size = 16e-6  # m
-
 # Reconstruction space: discretized functions on a cuboid
 reco_space = odl.uniform_discr(min_pt=[-rescale_factor*210e-9/4,
                                        -rescale_factor*250e-9/4,

@@ -1,0 +1,49 @@
+import odl
+import numpy as np
+from odl.contrib import fom
+from odl.contrib.mrc import FileReaderMRC
+
+
+rescale_factor = 1e9
+
+voxel_size = 0.4767e-9  # m
+
+# Reconstruction space: discretized functions on a cuboid
+reco_space = odl.uniform_discr(min_pt=[-rescale_factor*256*voxel_size,
+                                       -rescale_factor*128*voxel_size,
+                                       -rescale_factor*256*voxel_size],
+                               max_pt=[rescale_factor*256*voxel_size,
+                                       rescale_factor*128*voxel_size,
+                                       rescale_factor*256*voxel_size],
+                               shape=[512, 256, 512], dtype='float64')
+
+
+
+base_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/'
+
+
+# %% 
+num_cycles = 3
+num_angles = 81
+iterate = (num_cycles * num_angles) - 1
+
+
+reg_param_list = [3e2, 9e2, 3e3, 9e3, 3e4]
+gamma_H1_list = [0.9, 0.95, 0.99]
+Niter_CG_list = [20, 30, 40]
+
+for reg_param in reg_param_list:
+    for gamma_H1 in gamma_H1_list:
+        for Niter_CG in Niter_CG_list:
+            try:
+                method_path = 'Experimental/Region1/kaczmarz'
+                param_path = '_gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'/iterate_' + str(iterate) 
+                path = base_path + method_path + param_path + '.npy'
+                fig_path = base_path + method_path + param_path
+                
+                reco_array = np.load(path)
+                reco = reco_space.element(reco_array)
+                reco.show(title=method_path+'\n'+param_path, saveto=fig_path)
+            except:
+                pass
+
