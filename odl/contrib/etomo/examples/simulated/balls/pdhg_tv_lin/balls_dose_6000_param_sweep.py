@@ -156,7 +156,7 @@ for reg_param in reg_param_list:
         # --- Select solver parameters and solve using PDHG --- #
         
         # Estimated operator norm, add 10 percent to ensure ||K||_2^2 * sigma * tau < 1
-        op_norm = 1.1 * 0.067 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
+        op_norm = 1.1 * 0.073 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
         
         
         niter = 10001  # Number of iterations

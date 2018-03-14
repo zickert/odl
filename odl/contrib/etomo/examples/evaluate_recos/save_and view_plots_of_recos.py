@@ -31,9 +31,9 @@ phantom -= bg_cst
 
 # %%
 
-gamma_huber_list = [0.01]
-reg_par_list = [2.5e-4]
-iterate = 600
+reg_par_list = [1e-4, 1e-3, 1e-2, 1e-1, 5e-3, 5e-4, 2.5e-4, 7.5e-4]
+gamma_huber_list = [1e-2]
+iterate = 800
 
 for gamma_huber in gamma_huber_list:
     for reg_par in reg_par_list:
@@ -50,22 +50,25 @@ for gamma_huber in gamma_huber_list:
 
 
 # %%
-gamma_huber_list = [0.01]
-reg_par_list = [1e-3]
-iterate = 1000
+reg_par_list = [1e-4, 1e-3, 1e-2, 1e-1, 5e-3, 5e-4, 2.5e-4, 7.5e-4]
+gamma_huber_list = [1e-2]
+iterate = 800
 
 for gamma_huber in gamma_huber_list:
     for reg_par in reg_par_list:
-        
-        method_path = '/Simulated/Balls/dose_6000/gradient_descent_huber_reg_LINEARIZED'
-        param_path = '_gamma='+str(gamma_huber)+'_reg_par='+str(reg_par)+'/iterate_' + str(iterate) 
-        path = base_path + method_path + param_path + '.npy'
-        fig_path = base_path + method_path + param_path
-        
-        
-        reco_array = np.load(path)
-        reco = reco_space.element(reco_array)
-        reco.show(title=method_path+'\n'+param_path, saveto=fig_path)
+        try:
+            method_path = '/Simulated/Balls/dose_6000/gradient_descent_huber_reg_LINEARIZED'
+            param_path = '_gamma='+str(gamma_huber)+'_reg_par='+str(reg_par)+'/iterate_' + str(iterate) 
+            path = base_path + method_path + param_path + '.npy'
+            fig_path = base_path + method_path + param_path
+            
+            
+            reco_array = np.load(path)
+            reco = reco_space.element(reco_array)
+            reco.show(title=method_path+'\n'+param_path, saveto=fig_path)
+        except:
+            pass
+
 
 
 

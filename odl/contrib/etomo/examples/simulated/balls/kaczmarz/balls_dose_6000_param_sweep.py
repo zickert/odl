@@ -150,7 +150,7 @@ for reg_param in reg_param_list:
         for Niter_CG in Niter_CG_list:
             print('NiterCG= '+str(Niter_CG))
             print('time: '+str(timedelta(seconds=time()-start)))
-            saveto_path = reco_path+'/_gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'iterate_{}'
+            saveto_path = reco_path+'/_gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'_iterate_{}'
             
             callback = odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
                                                       step=num_angles*num_cycles-1,
