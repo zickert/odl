@@ -5,6 +5,8 @@ import os
 import odl
 from odl.contrib import etomo
 from odl.contrib.mrc import FileReaderMRC
+from time import time
+from datetime import timedelta
 
 # Read phantom and data.
 dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Simulated/Balls/dose_6000')
@@ -36,7 +38,6 @@ obj_magnitude = sigma / rescale_factor
 #gamma_H1 = 0.9
 num_angles = 61
 num_angles_per_block = 1
-num_cycles = 3
 
 ice_thickness = 50e-9
 
@@ -132,17 +133,24 @@ data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
 
 # %% RECONSTRUCTION
 
-reg_param_list = [3e2, 3e3, 3e4]
-gamma_H1_list = [0.8, 0.9, 0.95, 0.99]
-Niter_CG_list = [30]
+reg_param_list = [3e2, 9e2, 3e3, 9e3]
+gamma_H1_list = [0.9, 0.95, 0.99]
+Niter_CG_list = [20]
+num_cycles = 10
+
 
 reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Simulated/Balls/dose_6000/kaczmarz'
 
-for reg_param in reg_param_list:
-    for gamma_H1 in gamma_H1_list:
-        for Niter_CG in Niter_CG_list:
+start = time()
 
-            saveto_path = reco_path+'_gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'/iterate_{}'
+for reg_param in reg_param_list:
+    print('reg_param= '+str(reg_param))
+    for gamma_H1 in gamma_H1_list:
+        print('gamma_H1= '+str(gamma_H1))
+        for Niter_CG in Niter_CG_list:
+            print('NiterCG= '+str(Niter_CG))
+            print('time: '+timedelta(seconds=time()-start))
+            saveto_path = reco_path+'/_gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'iterate_{}'
             
             callback = odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
                                                       step=num_angles*num_cycles-1,

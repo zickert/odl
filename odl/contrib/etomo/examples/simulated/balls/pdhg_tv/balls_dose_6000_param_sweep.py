@@ -6,6 +6,8 @@ import os
 import odl
 from odl.contrib import etomo
 from odl.contrib.mrc import FileReaderMRC
+from time import time
+from datetime import timedelta
 
 # Read phantom and data.
 dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Simulated/Balls/dose_6000')
@@ -134,18 +136,27 @@ data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
 ####################
 # --- Set up the inverse problem --- #
 
-reg_param_list = [1e-3, 3e-3, 1e-2, 3e-2, 1e-1]
-step_param_list = [1e-4, 1e-3, 1e-2, 1e-1]
+reg_param_list = [1e-4, 3e-4, 1e-3, 3e-3]
+step_param_list = [1e-3, 1e-2, 1e-1]
+niter = 3001  # Number of iterations
+steps_to_save = 1000
 
 reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Simulated/Balls/dose_6000/pdhg_tv_pos_constr'
 
-for reg_param in reg_param_list:
-    for step_param in step_param_list:
+start = time()
 
-        saveto_path = reco_path+'_step_par='+str(step_param)+'_reg_par='+str(reg_param)+'/iterate_{}'
+
+for reg_param in reg_param_list:
+    print('reg_param='+str(reg_param))
+    for step_param in step_param_list:
+        print('step_param='+str(step_param))
+        print('time: '+timedelta(seconds=time()-start))
+
+        saveto_path = reco_path+'/step_par='+str(step_param)+'_reg_par='+str(reg_param)+'_iterate_{}'
         
         callback = odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
-                                                  step=200, impl='numpy')
+                                                  step=steps_to_save,
+                                                  impl='numpy')
     
         
         
@@ -175,10 +186,10 @@ for reg_param in reg_param_list:
         # --- Select solver parameters and solve using PDHG --- #
         
         # Estimated operator norm, add 10 percent to ensure ||K||_2^2 * sigma * tau < 1
-        op_norm = 1.1 * 0.067 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
+        op_norm = 1.1 * 0.073 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
         
         
-        niter = 1001  # Number of iterations
+
         tau = step_param / op_norm  # Step size for the primal variable
         sigma = step_param / op_norm  # Step size for the dual variable
         
