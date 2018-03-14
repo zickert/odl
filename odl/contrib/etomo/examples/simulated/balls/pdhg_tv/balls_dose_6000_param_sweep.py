@@ -150,7 +150,7 @@ for reg_param in reg_param_list:
     print('reg_param='+str(reg_param))
     for step_param in step_param_list:
         print('step_param='+str(step_param))
-        print('time: '+timedelta(seconds=time()-start))
+        print('time: '+str(timedelta(seconds=time()-start)))
 
         saveto_path = reco_path+'/step_par='+str(step_param)+'_reg_par='+str(reg_param)+'_iterate_{}'
         
