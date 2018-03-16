@@ -21,8 +21,15 @@ class BlockRayTransform(RayTransform):
         else:
             # Hack for defining Ray-trafo with single-angle geometry
             angle = self.geometry.angles[sub_op_idx[0]]
-            angle_increment = self.geometry.angles[1] - self.geometry.angles[0]
-            apart = odl.uniform_partition(angle, angle+angle_increment, 1,
+            
+            if sub_op_idx[0] != self.geometry.angles.shape[0] -1:
+                min_pt = angle
+                max_pt = self.geometry.angles[sub_op_idx[0]+1]
+            else:
+                min_pt = angle
+                max_pt = angle + (angle - self.geometry.angles[sub_op_idx[0]-1])
+#            angle_increment = self.geometry.angles[1] - self.geometry.angles[0]
+            apart = odl.uniform_partition(min_pt, max_pt, 1,
                                           nodes_on_bdry=(True,False))
             dpart = self.geometry.det_partition
             geom = odl.tomo.Parallel3dAxisGeometry(apart,

@@ -154,7 +154,7 @@ mismatch_lin = data-data_from_this_model_lin
 
 #%%
 coords = [np.pi/3, [-50,-30], [-30,-10]]
-#coords = [0, None, None]
+coords = [0, None, None]
 
 (data-np.mean(data)).show(coords=coords, title='TEM-Simulator data')
 (data_from_this_model-np.mean(data_from_this_model)).show(coords=coords, title='data from my op')
@@ -166,6 +166,10 @@ mismatch_lin.show(coords=coords, title='mismatch_lin')
 print(str(((data-np.mean(data)).norm())))
 print(str(mismatch.norm()))
 print(str(mismatch_lin.norm()))
+
+
+# relative size of non-linearity:
+print(str(nonlinearity.norm()/(data_from_this_model-np.mean(data_from_this_model)).norm()))
 
 #
 #data_zero_tilt = (data).asarray()[30,:,:]

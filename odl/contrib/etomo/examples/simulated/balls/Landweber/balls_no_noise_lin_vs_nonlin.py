@@ -1,8 +1,6 @@
 """Electron tomography reconstruction example using data from TEM-Simulator"""
 
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt 
+
 import numpy as np
 import os
 import odl
@@ -12,12 +10,12 @@ from odl.contrib.mrc import FileReaderMRC
 # Read phantom and data.
 dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Simulated/Balls/No_noise')
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
-file_path_tiltseries = os.path.join(dir_path, 'tiltseries_perfect_mtf_perfect_dqe.mrc')
+#file_path_tiltseries = os.path.join(dir_path, 'tiltseries_perfect_mtf_perfect_dqe.mrc')
 
 with FileReaderMRC(file_path_phantom) as phantom_reader:
     phantom_header, phantom_asarray = phantom_reader.read()
-with FileReaderMRC(file_path_tiltseries) as tiltseries_reader:
-    tiltseries_header, data_asarray = tiltseries_reader.read()
+#with FileReaderMRC(file_path_tiltseries) as tiltseries_reader:
+#    tiltseries_header, data_asarray = tiltseries_reader.read()
 
 # The reconstruction space will be rescaled according to rescale_factor in
 # order to avoid numerical issues related to having a very small reco space.
@@ -92,22 +90,26 @@ imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
                                                 focal_length=focal_length,
                                                 mean_energy_spread=mean_energy_spread,
                                                 acc_voltage=acc_voltage,
-                                                chromatic_abe=chromatic_abe)
+                                                chromatic_abe=chromatic_abe,
+                                                normalize=True)
 
 phantom = reco_space.element(phantom_asarray)
 
+bg_cst = np.min(phantom)
+phantom -= bg_cst
+
 # Define forward operator as a composition
 forward_op = imageFormation_op * ray_trafo
+lin_op  = forward_op(reco_space.zero()) + forward_op.derivative(reco_space.zero())
 
-
-# Make  a ODL discretized function of the MRC data
-data = forward_op.range.element(np.transpose(data_asarray, (2, 0, 1)))
 
 # Correct for diffrent pathlenght of the electrons through the buffer
-data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
+data = forward_op(phantom)
+lin_data = lin_op(phantom)
 
+#%%
 
-
+maxiter = 1000
 
 reco = ray_trafo.domain.zero()
 #reco = 0.5*phantom
@@ -117,9 +119,9 @@ callback = (odl.solvers.CallbackPrintIteration() &
 #Landweber iterations
 nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
 
-op_norm = 1.1 * 0.067
+op_norm = 1.1 * 0.073 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
 
 omega = 1 / (op_norm ** 2)
 
-odl.solvers.landweber(forward_op, reco, data, 1000, omega=omega,
+odl.solvers.landweber(forward_op, reco, data, maxiter, omega=omega,
                       callback=callback,projection=nonneg_projection)

@@ -6,11 +6,16 @@ import odl
 from odl.contrib import etomo
 import matplotlib.pyplot as plt 
 from odl.contrib.mrc import FileReaderMRC
-
+from time import time
+from datetime import timedelta
 # Read data
 dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Experimental')
 file_path_data = os.path.join(dir_path, 'region1.mrc')
+angle_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Data/Experimental/tiltangles.txt'
 
+# load tiltangles
+angles = np.loadtxt(angle_path, skiprows=3, unpack=True)
+angles = angles[1,:]
 with FileReaderMRC(file_path_data) as reader:
     header, data = reader.read()
 
@@ -59,9 +64,10 @@ reco_space = odl.uniform_discr(min_pt=[-rescale_factor*256*voxel_size,
                                shape=[512, 256, 512], dtype='float64')
 
 # Make a 3d single-axis parallel beam geometry with flat detector
-# Angles: uniformly spaced, n = num_angles, min = -62.18 deg, max = 58.03 deg
-angle_partition = odl.uniform_partition(-62.18*np.pi/180, 58.03*np.pi/180,
-                                        num_angles, nodes_on_bdry=True)
+#angle_partition = odl.uniform_partition(-62.18*np.pi/180, 58.03*np.pi/180,
+#                                        num_angles, nodes_on_bdry=True)
+# Make nonuniform angle partition
+angle_partition = odl.nonuniform_partition((np.pi/180) * angles, nodes_on_bdry=True)
 
 detector_partition = odl.uniform_partition([-rescale_factor*256*voxel_size,
                                             -rescale_factor*128*voxel_size],
@@ -112,12 +118,16 @@ Niter_CG_list = [30]
 
 reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Experimental/Region1/kaczmarz'
 
+start = time()
+
 for reg_param in reg_param_list:
     print('reg_param= '+str(reg_param))
     for gamma_H1 in gamma_H1_list:
         print('gamma_H1= '+str(gamma_H1))
         for Niter_CG in Niter_CG_list:
             print('NiterCG= '+str(Niter_CG))
+            print('time: '+str(timedelta(seconds=time()-start)))
+
             saveto_path = reco_path+'_gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'/iterate_{}'
             
             callback = odl.solvers.CallbackSaveToDisk(saveto=saveto_path,

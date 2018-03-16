@@ -1,26 +1,10 @@
-"""Electron tomography reconstruction example using real data."""
-
-import numpy as np
-import os
 import odl
+import numpy as np
 from odl.contrib import etomo
-import matplotlib.pyplot as plt 
+from odl.contrib import fom
 from odl.contrib.mrc import FileReaderMRC
+import matplotlib.pyplot as plt
 
-# Read data
-dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Experimental')
-file_path_data = os.path.join(dir_path, 'region1.mrc')
-angle_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Data/Experimental/tiltangles.txt'
-
-# load tiltangles
-angles = np.loadtxt(angle_path, skiprows=3, unpack=True)
-angles = angles[1,:]
-
-with FileReaderMRC(file_path_data) as reader:
-    header, data = reader.read()
-
-# The reconstruction space will be rescaled according to rescale_factor in
-# order to avoid numerical issues related to having a very small reco space.
 rescale_factor = 1e9
 
 #  Define some physical constants
@@ -64,12 +48,9 @@ reco_space = odl.uniform_discr(min_pt=[-rescale_factor*256*voxel_size,
                                shape=[512, 256, 512], dtype='float64')
 
 # Make a 3d single-axis parallel beam geometry with flat detector
-
-#angle_partition = odl.uniform_partition(-62.18*np.pi/180, 58.03*np.pi/180,
-#                                        num_angles, nodes_on_bdry=True)
-# Make nonuniform angle partition
-angle_partition = odl.nonuniform_partition((np.pi/180) * angles, nodes_on_bdry=True)
-
+# Angles: uniformly spaced, n = num_angles, min = -62.18 deg, max = 58.03 deg
+angle_partition = odl.uniform_partition(-62.18*np.pi/180, 58.03*np.pi/180,
+                                        num_angles, nodes_on_bdry=True)
 
 detector_partition = odl.uniform_partition([-rescale_factor*256*voxel_size,
                                             -rescale_factor*128*voxel_size],
@@ -108,71 +89,45 @@ imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
 forward_op = imageFormation_op * ray_trafo
 
 
-data = forward_op.range.element(np.transpose(data - detector_zero_level,
-                                             (2, 0, 1)))
-data = etomo.buffer_correction(data)
+
+base_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/'
 
 
-# %% TRY RECONSTRUCTION
-
-
-reg_param = 3e3
 gamma_H1 = 0.95
+reg_param = 3e3
 Niter_CG = 30
+iterate = 242
 
-reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Experimental/Region1/kaczmarz'
+method_path = 'Experimental/Region1/kaczmarz'
+param_path = '/gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'_iterate_' + str(iterate) 
+path = base_path + method_path + param_path + '.npy'
 
+reco_array = np.load(path)         
+reco = reco_space.element(reco_array)
 
-callback = (odl.solvers.CallbackPrintIteration() &
-            odl.solvers.CallbackShow())
+data = forward_op(reco)
 
-reco = ray_trafo.domain.zero()
+#%%
 
-kaczmarz_plan = etomo.make_kaczmarz_plan(num_angles,
-                                         block_length=num_angles_per_block,
-                                         method='mls')
-
-ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
-
-F_post = etomo.make_imageFormationOp(ray_trafo_block.range,
-                                     wave_number, spherical_abe,
-                                     defocus,
-                                     rescale_factor=rescale_factor,
-                                     obj_magnitude=obj_magnitude,
-                                     abs_phase_ratio=abs_phase_ratio,
-                                     aper_rad=aper_rad,
-                                     aper_angle=aper_angle,
-                                     focal_length=focal_length,
-                                     mean_energy_spread=mean_energy_spread,
-                                     acc_voltage=acc_voltage,
-                                     chromatic_abe=chromatic_abe,
-                                     normalize=True)
+# Test that buffer_correct method really uses background for balls phantom
 
 
-F_pre = odl.IdentityOperator(reco_space)
+dim_t, dim_x, dim_y = data.shape
+data_asarray = data.asarray()
+
+bg_coords = [[0, 0.25],[0, 0.25]]
 
 
-get_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
-                              Op_post=F_post)
-get_data = etomo.make_data_blocks(data, kaczmarz_plan)
-
-# Optional nonnegativity-constraint
-nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
-
-
-reco = reco_space.zero()
-get_proj_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo,
-                                   Op_pre=F_pre,
-                                   Op_post=None)
-
-etomo.kaczmarz_SART_method(get_proj_op, reco, get_data,
-                           len(kaczmarz_plan),
-                           reg_param*obj_magnitude ** 2,
-                           imageFormationOp=F_post, gamma_H1=gamma_H1,
-                           niter_CG=Niter_CG, callback=callback,
-                           num_cycles=num_cycles,
-                           projection=nonneg_projection)
+# Pick out background according to coords
+bg = data_asarray[:, round(dim_x*bg_coords[0][0]):round(dim_x*bg_coords[0][1]),
+                  round(dim_y*bg_coords[1][0]):round(dim_y*bg_coords[1][1])]
 
 
 
+plt.imshow(bg[80,:,:])
+plt.colorbar()
+
+plt.figure()
+plt.imshow(data_asarray[80,:,:])
+plt.colorbar()
 

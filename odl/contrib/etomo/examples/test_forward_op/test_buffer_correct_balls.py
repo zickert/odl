@@ -143,3 +143,4 @@ plt.colorbar()
 plt.figure()
 plt.imshow(data_asarray[30,:,:])
 plt.colorbar()
+

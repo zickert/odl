@@ -109,11 +109,6 @@ phantom = reco_space.element(phantom_asarray)
 bg_cst = np.min(phantom)
 phantom -= bg_cst
 
-# Make a ODL discretized function of the MRC data
-data = forward_op.range.element(np.transpose(data_asarray, (2, 0, 1)))
-
-# Correct for diffrent pathlenght of the electrons through the buffer
-data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
 
 data=forward_op(phantom)
 

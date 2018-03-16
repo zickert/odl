@@ -91,26 +91,31 @@ imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
                                                 focal_length=focal_length,
                                                 mean_energy_spread=mean_energy_spread,
                                                 acc_voltage=acc_voltage,
-                                                chromatic_abe=chromatic_abe)
+                                                chromatic_abe=chromatic_abe,
+                                                normalize=True)
 
 phantom = reco_space.element(phantom_asarray)
+
+
+bg_cst = np.min(phantom)
+phantom -=  bg_cst
 
 # Define forward operator as a composition
 forward_op = imageFormation_op * ray_trafo
 
 lin_op = forward_op(reco_space.zero())+forward_op.derivative(reco_space.zero())
 
+data = forward_op(phantom)
 
-# Make  a ODL discretized function of the MRC data
-data = forward_op.range.element(np.transpose(data_asarray, (2, 0, 1)))
-
-# Correct for diffrent pathlenght of the electrons through the buffer
-data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
-
-
+#%% 
 #PDHG
-####################
+
 # --- Set up the inverse problem --- #
+
+
+reg_param = 1e-7
+step_par = 1e-2
+
 
 forward_op = lin_op
 
@@ -130,7 +135,7 @@ g = odl.solvers.IndicatorNonnegativity(reco_space)
 l2_norm = odl.solvers.L2NormSquared(forward_op.range).translated(data)
 
 #
-reg_param = 0.015
+
 
 # Isotropic TV-regularization i.e. the l1-norm
 l1_norm = reg_param * odl.solvers.GroupL1Norm(gradient.range)
@@ -144,9 +149,9 @@ f = odl.solvers.SeparableSum(l2_norm, l1_norm)
 op_norm = 1.1 * 0.073 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
 
 
-niter = 10000  # Number of iterations
-tau = 0.01 / op_norm  # Step size for the primal variable
-sigma = 0.01 / op_norm  # Step size for the dual variable
+niter = 1000  # Number of iterations
+tau = step_par / op_norm  # Step size for the primal variable
+sigma = step_par / op_norm  # Step size for the dual variable
 
 
 
