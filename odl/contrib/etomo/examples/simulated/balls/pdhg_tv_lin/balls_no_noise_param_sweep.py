@@ -1,22 +1,24 @@
 """Electron tomography reconstruction example using data from TEM-Simulator"""
 
-
+import matplotlib.pyplot as plt 
 import numpy as np
 import os
 import odl
 from odl.contrib import etomo
 from odl.contrib.mrc import FileReaderMRC
+from time import time
+from datetime import timedelta
+
 
 # Read phantom and data.
 dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Simulated/Balls/No_noise')
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
-file_path_tiltseries = os.path.join(dir_path, 'tiltseries_perfect_mtf_perfect_dqe.mrc')
+#file_path_tiltseries = os.path.join(dir_path, 'tiltseries_perfect_mtf_perfect_dqe.mrc')
 
 with FileReaderMRC(file_path_phantom) as phantom_reader:
     phantom_header, phantom_asarray = phantom_reader.read()
-with FileReaderMRC(file_path_tiltseries) as tiltseries_reader:
-    tiltseries_header, data_asarray = tiltseries_reader.read()
-
+#with FileReaderMRC(file_path_tiltseries) as tiltseries_reader:
+#    tiltseries_header, data_asarray = tiltseries_reader.read()
 
 # The reconstruction space will be rescaled according to rescale_factor in
 # order to avoid numerical issues related to having a very small reco space.
@@ -27,7 +29,7 @@ e_mass = 9.11e-31  # kg
 e_charge = 1.602e-19  # C
 planck_bar = 1.059571e-34  # Js/rad
 
-wave_length = 0.00251e-9  # m
+wave_length = 0.0025e-9  # m
 wave_number = 2 * np.pi / wave_length
 
 sigma = e_mass * e_charge / (wave_number * planck_bar ** 2)
@@ -35,10 +37,6 @@ sigma = e_mass * e_charge / (wave_number * planck_bar ** 2)
 abs_phase_ratio = 0.1
 obj_magnitude = sigma / rescale_factor
 num_angles = 61
-
-
-num_angles_per_block = 1
-
 
 # Define properties of the optical system
 # Set focal_length to be the focal_length of the principal (first) lens !
@@ -55,13 +53,13 @@ defocus = 3e-6  # m
 # Set size of detector pixels (before rescaling to account for magnification)
 det_size = 16e-6  # m
 
-## Reconstruction space: discretized functions on a cuboid
-reco_space = odl.uniform_discr(min_pt=[-rescale_factor*(210e-9)/4,
-                                       -rescale_factor*(250e-9)/4,
-                                       -rescale_factor*(40e-9)/4],
-                               max_pt=[rescale_factor*(210e-9)/4,
-                                       rescale_factor*(250e-9)/4,
-                                       rescale_factor*(40e-9)/4],
+# Reconstruction space: discretized functions on a cuboid
+reco_space = odl.uniform_discr(min_pt=[-rescale_factor*210e-9/4,
+                                       -rescale_factor*250e-9/4,
+                                       -rescale_factor*40e-9/4],
+                               max_pt=[rescale_factor*210e-9/4,
+                                       rescale_factor*250e-9/4,
+                                       rescale_factor*40e-9/4],
                                shape=[210, 250, 40], dtype='float64')
 # Make a 3d single-axis parallel beam geometry with flat detector
 # Angles: uniformly spaced, n = 180, min = 0, max = pi
@@ -76,12 +74,12 @@ detector_partition = odl.uniform_partition([-rescale_factor*det_size/M * 210/2,
 # The x-axis is the tilt-axis.
 geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition,
                                            axis=(1, 0, 0),
-                                           det_pos_init=(0, 0, 1),
+                                           det_pos_init=(0, 0, -1),
                                            det_axes_init=((1, 0, 0),
                                                           (0, 1, 0)))
 
 # Ray transform
-ray_trafo = etomo.BlockRayTransform(reco_space, geometry)
+ray_trafo = odl.tomo.RayTransform(reco_space, geometry)
 
 # The image-formation operator models the optics and the detector
 # of the electron microscope.
@@ -110,71 +108,80 @@ phantom -= bg_cst
 
 data=forward_op(phantom)
 
-# %% RECONSTRUCTION
+lin_op  = forward_op(reco_space.zero()) + forward_op.derivative(reco_space.zero())
+forward_op = lin_op
 
-reg_param = 1e-3
-gamma_H1 = 0.0
-num_angles_per_block = 1
-num_cycles = 3
-Niter_CG = 30
+# %%
 
+#PDHG
+####################
+# --- Set up the inverse problem --- #
 
-reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Simulated/Balls/no_noise/kaczmarz'
+reg_param_list = [1e-7, 1e-6, 1e-5, 1e-4]
+step_param_list = [1e-3, 1e-2, 1e-1]
+niter = 3001  # Number of iterations
+steps_to_save = 1000
 
-saveto_path = reco_path+'/gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'_iterate_{}'
+reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Simulated/Balls/no_noise/pdhg_tv_pos_constr'
 
-
-
-reco = ray_trafo.domain.zero()
-callback = (odl.solvers.CallbackPrintIteration() &
-            odl.solvers.CallbackShow() &
-            odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
-                                                      step=num_angles*num_cycles-1,
-                                                      impl='numpy'))
+start = time()
 
 
+for reg_param in reg_param_list:
+    print('reg_param='+str(reg_param))
+    for step_param in step_param_list:
+        print('step_param='+str(step_param))
+        print('time: '+str(timedelta(seconds=time()-start)))
 
+        saveto_path = reco_path+'/step_par='+str(step_param)+'_reg_par='+str(reg_param)+'_iterate_{}'
+        
+        callback = odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
+                                                  step=steps_to_save,
+                                                  impl='numpy')
+    
+        
+        
+        # Initialize gradient operator
+        gradient = odl.Gradient(reco_space)
+        
+        # Column vector of two operators
+        op = odl.BroadcastOperator(forward_op, gradient)
+        
+        # Do not use the g functional, set it to zero.
+        g = odl.solvers.IndicatorNonnegativity(reco_space)
+        
+        # Create functionals for the dual variable
+        
+        # l2-squared data matching
+        l2_norm = odl.solvers.L2NormSquared(forward_op.range).translated(data)
+        
+        #
+        #reg_param = 0.015
+        
+        # Isotropic TV-regularization i.e. the l1-norm
+        l1_norm = reg_param * odl.solvers.GroupL1Norm(gradient.range)
+        
+        # Combine functionals, order must correspond to the operator K
+        f = odl.solvers.SeparableSum(l2_norm, l1_norm)
+        
+        # --- Select solver parameters and solve using PDHG --- #
+        
+        # Estimated operator norm, add 10 percent to ensure ||K||_2^2 * sigma * tau < 1
+        op_norm = 1.1 * 0.073 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
+        
+        
 
-kaczmarz_plan = etomo.make_kaczmarz_plan(num_angles,
-                                         block_length=num_angles_per_block,
-                                         method='mls')
-
-ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
-
-F_post = etomo.make_imageFormationOp(ray_trafo_block.range,
-                                     wave_number, spherical_abe,
-                                     defocus,
-                                     rescale_factor=rescale_factor,
-                                     obj_magnitude=obj_magnitude,
-                                     abs_phase_ratio=abs_phase_ratio,
-                                     aper_rad=aper_rad, aper_angle=aper_angle,
-                                     focal_length=focal_length,
-                                     mean_energy_spread=mean_energy_spread,
-                                     acc_voltage=acc_voltage,
-                                     chromatic_abe=chromatic_abe,
-                                     normalize=True)
-F_pre = odl.IdentityOperator(reco_space)
-
-
-get_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
-                              Op_post=F_post)
-get_data = etomo.make_data_blocks(data, kaczmarz_plan)
-
-# Optional nonnegativity-constraint
-nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
-
-
-reco = reco_space.zero()
-#reco = 0.9 * phantom
-
-get_proj_op = etomo.make_Op_blocks(kaczmarz_plan, ray_trafo, Op_pre=F_pre,
-                                   Op_post=None)
-
-etomo.kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
-                           reg_param*obj_magnitude ** 2,
-                           imageFormationOp=F_post, gamma_H1=gamma_H1,
-                           niter_CG=Niter_CG, callback=callback,
-                           num_cycles=num_cycles, projection=nonneg_projection)
-
+        tau = step_param / op_norm  # Step size for the primal variable
+        sigma = step_param / op_norm  # Step size for the dual variable
+        
+        
+        
+        # Choose a starting point
+        x = reco_space.zero()
+        #x = 0.5*phantom
+        
+        # Run the algorithm
+        odl.solvers.pdhg(x, f, g, op, tau=tau, sigma=sigma, niter=niter,
+                         callback=callback)
 
 

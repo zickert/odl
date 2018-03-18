@@ -105,23 +105,62 @@ lin_op  = forward_op(reco_space.zero()) + forward_op.derivative(reco_space.zero(
 
 # Correct for diffrent pathlenght of the electrons through the buffer
 data = forward_op(phantom)
-lin_data = lin_op(phantom)
 
 #%%
 
-maxiter = 1000
+maxiter = 1001
+op_norm = 1.1 * 0.073 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
+
+omega = 1 / (op_norm ** 2)
+
+reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Simulated/Balls/no_noise/landweber'
+saveto_path = reco_path+'/omega='+str(omega)+'_iterate_{}'
+
+
 
 reco = ray_trafo.domain.zero()
-#reco = 0.5*phantom
 callback = (odl.solvers.CallbackPrintIteration() &
-            odl.solvers.CallbackShow())
+            odl.solvers.CallbackShow() &
+            odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
+                                                      step=1000,
+                                                      impl='numpy'))
+
 
 #Landweber iterations
 nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
 
+
+
+odl.solvers.landweber(forward_op, reco, data, maxiter, omega=omega,
+                      callback=callback,projection=nonneg_projection)
+
+
+#%%
+
+forward_op = lin_op
+
+maxiter = 1001
 op_norm = 1.1 * 0.073 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
 
 omega = 1 / (op_norm ** 2)
+
+reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Simulated/Balls/no_noise/landweber_lin'
+saveto_path = reco_path+'/omega='+str(omega)+'_iterate_{}'
+
+
+
+reco = ray_trafo.domain.zero()
+callback = (odl.solvers.CallbackPrintIteration() &
+            odl.solvers.CallbackShow() &
+            odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
+                                                      step=1000,
+                                                      impl='numpy'))
+
+
+#Landweber iterations
+nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
+
+
 
 odl.solvers.landweber(forward_op, reco, data, maxiter, omega=omega,
                       callback=callback,projection=nonneg_projection)

@@ -115,18 +115,51 @@ for reg_param in reg_param_list:
                 method_path = 'Simulated/Balls/dose_6000/kaczmarz'
                 param_path = '_gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'/iterate_' + str(iterate) 
                 path = base_path + method_path + param_path + '.npy'
-    #            fig_path = base_path + method_path + param_path
+                fig_path = base_path + method_path + param_path
                 
     
     
                 reco_array = np.load(path)
-    #            reco = reco_space.element(reco_array)
+                reco = reco_space.element(reco_array)
                 
                 param_path = '/gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'_iterate_' + str(iterate) 
                 path = base_path + method_path + param_path + '.npy'            
                 np.save(path, reco_array)
     
                 
-    #            reco.show(title=method_path+'\n'+param_path, saveto=fig_path)
+                reco.show(title=method_path+'\n'+param_path, saveto=fig_path)
+            except:
+                pass
+
+
+# %% 
+iterate = 182
+num_cycles = 3
+
+reg_param_list = [1e-3, 3e2, 9e2, 3e3, 9e3, 3e4]
+gamma_H1_list = [0.0, 0.8]
+Niter_CG_list = [20, 30, 40]
+
+for reg_param in reg_param_list:
+    for gamma_H1 in gamma_H1_list:
+        for Niter_CG in Niter_CG_list:
+            try:
+
+                method_path = 'Simulated/Balls/no_noise/kaczmarz'
+                param_path = '/gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'/iterate_' + str(iterate) 
+                path = base_path + method_path + param_path + '.npy'
+                fig_path = base_path + method_path + param_path
+                
+    
+    
+                reco_array = np.load(path)
+                reco = reco_space.element(reco_array)
+                
+                param_path = '/gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'_iterate_' + str(iterate) 
+                path = base_path + method_path + param_path + '.npy'            
+                np.save(path, reco_array)
+    
+                
+                reco.show(title=method_path+'\n'+param_path, saveto=fig_path)
             except:
                 pass
