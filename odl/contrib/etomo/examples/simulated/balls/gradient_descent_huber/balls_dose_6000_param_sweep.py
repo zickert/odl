@@ -129,9 +129,9 @@ data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
 
 #%%
 
-reg_par_list = [2.5e-4, 3.75e-4, 5e-4, 6.25e-4, 7.5e-4]
+reg_par_list = [3.75e-4]
 gamma_huber_list = [1e-2]
-maxiter = 3001
+maxiter = 10001
 
 reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Simulated/Balls/dose_6000/gradient_descent_huber_reg'
 
@@ -147,7 +147,7 @@ for gamma_huber in gamma_huber_list:
         saveto_path = reco_path+'/_gamma='+str(gamma_huber)+'_reg_par='+str(reg_par)+'_iterate_{}'
         
         callback = odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
-                                                  step=200, impl='numpy')
+                                                  step=1000, impl='numpy')
     
         reco = reco_space.zero()
     

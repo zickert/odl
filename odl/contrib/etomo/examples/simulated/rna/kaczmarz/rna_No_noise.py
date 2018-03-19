@@ -10,7 +10,7 @@ from odl.contrib import etomo
 from odl.contrib.mrc import FileReaderMRC
 
 # Read phantom and data.
-dir_path = os.path.abspath('/home/zickert/TEM_reco_project/Data/One_particle_RNA/odlworkshop/No_noise')
+dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Simulated/One_particle_RNA/No_noise')
 file_path_phantom = os.path.join(dir_path, 'rna_phantom.mrc')
 file_path_tiltseries = os.path.join(dir_path, 'tiltseries.mrc')
 
@@ -41,6 +41,17 @@ gamma_H1 = 0.0
 num_angles = 61
 num_angles_per_block = 1
 num_cycles = 3
+
+
+# CHANGE THESE
+aper_rad = 0.5*40e-6  # m
+focal_length = 2.7e-3  # m
+spherical_abe = 2.1e-3  # m
+chromatic_abe = 2.2e-3  # m
+aper_angle = 0.1e-3  # rad
+acc_voltage = 200.0e3  # V
+mean_energy_spread = 1.3  # V
+
 
 # Define sample diameter and height. We take flat sample
 sample_diam = 1200e-9  # m
@@ -88,8 +99,14 @@ imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
                                                 defocus,
                                                 rescale_factor=rescale_factor,
                                                 obj_magnitude=obj_magnitude,
-                                                abs_phase_ratio=abs_phase_ratio)
-
+                                                abs_phase_ratio=abs_phase_ratio,
+                                                aper_rad=aper_rad,
+                                                aper_angle=aper_angle,
+                                                focal_length=focal_length,
+                                                mean_energy_spread=mean_energy_spread,
+                                                acc_voltage=acc_voltage,
+                                                chromatic_abe=chromatic_abe,
+                                                normalize=True)
 # Define a spherical mask to implement support constraint.
 mask = reco_space.element(etomo.spherical_mask,
                           radius=rescale_factor * 10.0e-9)
@@ -119,7 +136,7 @@ data = forward_op.range.element(np.transpose(data_asarray, (2, 0, 1)))
 
 # Correct for diffrent pathlenght of the electrons through the buffer
 data = etomo.buffer_correction(data)
-data_from_this_model = etomo.buffer_correction(data_from_this_model)
+#data_from_this_model = etomo.buffer_correction(data_from_this_model)
 
 
 # Plot corrected data

@@ -133,9 +133,9 @@ data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
 ####################
 # --- Set up the inverse problem --- #
 
-reg_param_list = [1e-4, 3e-4, 1e-3, 3e-3]
-step_param_list = [1e-3, 1e-2, 1e-1]
-niter = 3001  # Number of iterations
+reg_param_list = [3e-4]
+step_param_list = [1e-1]
+niter = 10001  # Number of iterations
 steps_to_save = 1000
 
 reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Simulated/Balls/dose_6000/pdhg_tv_pos_constr'

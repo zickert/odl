@@ -108,7 +108,7 @@ data = forward_op(phantom)
 
 #%%
 
-maxiter = 1001
+maxiter = 10001
 op_norm = 1.1 * 0.073 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
 
 omega = 1 / (op_norm ** 2)
@@ -139,7 +139,7 @@ odl.solvers.landweber(forward_op, reco, data, maxiter, omega=omega,
 
 forward_op = lin_op
 
-maxiter = 1001
+maxiter = 10001
 op_norm = 1.1 * 0.073 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
 
 omega = 1 / (op_norm ** 2)
