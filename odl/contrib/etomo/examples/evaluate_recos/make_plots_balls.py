@@ -171,29 +171,36 @@ for step_param in step_param_list:
 #gamma_huber_list = [1e-2]
 
 
-reg_par_list = [2.5e-4, 3.75e-4, 5e-4, 6.25e-4, 7.5e-4]
+#reg_par_list = [2.5e-4, 3.75e-4, 5e-4, 6.25e-4, 7.5e-4]
+#gamma_huber_list = [1e-2]
+#iterate_list = [1000, 2000, 3000]
+#method_path = 'Simulated/Balls/dose_6000/gradient_descent_huber_reg'
+
+
+reg_par_list = [1e-7, 1e-6, 1e-5, 1e-4]
 gamma_huber_list = [1e-2]
 iterate_list = [1000, 2000, 3000]
+method_path = 'Simulated/Balls/no_noise/gradient_descent_huber_reg'
 
 
-method_path = 'Simulated/Balls/dose_6000/gradient_descent_huber_reg'
 
 for iterate in iterate_list:
     for gamma_huber in gamma_huber_list:
         for reg_par in reg_par_list:
-          
-            param_path = '/_gamma='+str(gamma_huber)+'_reg_par='+str(reg_par)+'_iterate_' + str(iterate) 
-            path = base_path + method_path + param_path + '.npy'
-            fig_path = base_path + method_path + param_path + '.png'
-            
-            reco_array = np.load(path)
-            reco = reco_space.element(reco_array)
-            reco.show(title=method_path+'\n'+param_path+'\n'
-                      +'SSIM='+str(ssim(phantom.asarray(), reco.asarray()))
-                      +', PSNR='+str(psnr(phantom.asarray(), reco.asarray(),
-                                               dynamic_range=np.max(phantom) - np.min(phantom)))
-                      , saveto=fig_path)
-    
+            try:
+                param_path = '/_gamma='+str(gamma_huber)+'_reg_par='+str(reg_par)+'_iterate_' + str(iterate) 
+                path = base_path + method_path + param_path + '.npy'
+                fig_path = base_path + method_path + param_path + '.png'
+                
+                reco_array = np.load(path)
+                reco = reco_space.element(reco_array)
+                reco.show(title=method_path+'\n'+param_path+'\n'
+                          +'SSIM='+str(ssim(phantom.asarray(), reco.asarray()))
+                          +', PSNR='+str(psnr(phantom.asarray(), reco.asarray(),
+                                                   dynamic_range=np.max(phantom) - np.min(phantom)))
+                          , saveto=fig_path)
+            except:
+                pass
     
 
 #%%

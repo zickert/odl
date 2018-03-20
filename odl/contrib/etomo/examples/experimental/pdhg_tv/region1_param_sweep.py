@@ -113,9 +113,9 @@ data = forward_op.range.element(np.transpose(data - detector_zero_level,
 data = etomo.buffer_correction(data)
 #%%
 
-reg_param_list = [1e-4, 3e-4, 1e-3, 3e-3]
-step_param_list = [1e-3, 1e-2, 1e-1]
-niter = 1001  # Number of iterations
+reg_param_list = [6e-4, 3e-4]
+step_param_list = [2e-2]
+niter = 5001  # Number of iterations
 steps_to_save = 1000
 
 reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Experimental/Region1/pdhg_tv_pos_constr'
