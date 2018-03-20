@@ -1,17 +1,14 @@
 """Electron tomography reconstruction example using data from TEM-Simulator"""
 
-import matplotlib.pyplot as plt 
+
 import numpy as np
 import os
 import odl
 from odl.contrib import etomo
 from odl.contrib.mrc import FileReaderMRC
-from time import time
-from datetime import timedelta
-
 
 # Read phantom and data.
-dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Simulated/Balls/No_noise')
+dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Simulated/Balls/dose_6000')
 file_path_phantom = os.path.join(dir_path, 'balls_phantom.mrc')
 #file_path_tiltseries = os.path.join(dir_path, 'tiltseries_perfect_mtf_perfect_dqe.mrc')
 
@@ -35,8 +32,12 @@ wave_number = 2 * np.pi / wave_length
 sigma = e_mass * e_charge / (wave_number * planck_bar ** 2)
 
 abs_phase_ratio = 0.1
-obj_magnitude = sigma / rescale_factor
+obj_magnitude = 2.0 * sigma / rescale_factor
 num_angles = 61
+
+
+ice_thickness = 50e-9
+
 
 # Define properties of the optical system
 # Set focal_length to be the focal_length of the principal (first) lens !
@@ -49,6 +50,13 @@ aper_angle = 0.1e-3  # rad
 acc_voltage = 200.0e3  # V
 mean_energy_spread = 1.3  # V
 defocus = 3e-6  # m
+gain = 80
+total_dose = 6000e18  # m^-2
+dose_per_img = total_dose / num_angles
+
+# Set size of detector pixels (before rescaling to account for magnification)
+det_size = 16e-6  # m
+det_area = det_size ** 2
 
 # Set size of detector pixels (before rescaling to account for magnification)
 det_size = 16e-6  # m
@@ -63,8 +71,7 @@ reco_space = odl.uniform_discr(min_pt=[-rescale_factor*210e-9/4,
                                shape=[210, 250, 40], dtype='float64')
 # Make a 3d single-axis parallel beam geometry with flat detector
 # Angles: uniformly spaced, n = 180, min = 0, max = pi
-angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, num_angles,
-                                        nodes_on_bdry=True)
+angle_partition = odl.uniform_partition(-np.pi/3, np.pi/3, num_angles, nodes_on_bdry=True)
 detector_partition = odl.uniform_partition([-rescale_factor*det_size/M * 210/2,
                                             -rescale_factor*det_size/M * 250/2],
                                            [rescale_factor*det_size/M * 210/2,
@@ -99,87 +106,85 @@ imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
 
 # Define forward operator as a composition
 forward_op = imageFormation_op * ray_trafo
+lin_op  = forward_op(reco_space.zero()) + forward_op.derivative(reco_space.zero())
 
 phantom = reco_space.element(phantom_asarray)
 
+# We remove the background from the phantom
 bg_cst = np.min(phantom)
 phantom -= bg_cst
 
+# Create data by calling forward op on phantom
+data = forward_op(phantom)
 
-data=forward_op(phantom)
+# Add noise
+total_cst = dose_per_img
+total_cst *= (1 / M) ** 2
+total_cst *= det_area
+buffer_contr = data.space.element(etomo.buffer_contribution,
+                                  sigma=sigma,
+                                  ice_thickness=ice_thickness)
+data = total_cst * buffer_contr * data
+data = gain * odl.phantom.poisson_noise(data)
 
+# Correct for different path-lengths through the buffer
+data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
 
-# %%
+#%%
 
-#PDHG
-####################
-# --- Set up the inverse problem --- #
+maxiter = 51
+op_norm = 1.1 * 0.073 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
 
-reg_param_list = [1e-4, 3e-4, 1e-3]
-step_param_list = [1e-1]
-niter = 10001  # Number of iterations
-steps_to_save = 1000
+omega = 1 / (op_norm ** 2)
 
-reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Simulated/Balls/no_noise/pdhg_tv_pos_constr'
-
-start = time()
-
-
-for reg_param in reg_param_list:
-    print('reg_param='+str(reg_param))
-    for step_param in step_param_list:
-        print('step_param='+str(step_param))
-        print('time: '+str(timedelta(seconds=time()-start)))
-
-        saveto_path = reco_path+'/step_par='+str(step_param)+'_reg_par='+str(reg_param)+'_iterate_{}'
-        
-        callback = odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
-                                                  step=steps_to_save,
-                                                  impl='numpy')
-    
-        
-        
-        # Initialize gradient operator
-        gradient = odl.Gradient(reco_space)
-        
-        # Column vector of two operators
-        op = odl.BroadcastOperator(forward_op, gradient)
-        
-        # Do not use the g functional, set it to zero.
-        g = odl.solvers.IndicatorNonnegativity(reco_space)
-        
-        # Create functionals for the dual variable
-        
-        # l2-squared data matching
-        l2_norm = odl.solvers.L2NormSquared(forward_op.range).translated(data)
-        
-        #
-        #reg_param = 0.015
-        
-        # Isotropic TV-regularization i.e. the l1-norm
-        l1_norm = reg_param * odl.solvers.GroupL1Norm(gradient.range)
-        
-        # Combine functionals, order must correspond to the operator K
-        f = odl.solvers.SeparableSum(l2_norm, l1_norm)
-        
-        # --- Select solver parameters and solve using PDHG --- #
-        
-        # Estimated operator norm, add 10 percent to ensure ||K||_2^2 * sigma * tau < 1
-        op_norm = 1.1 * 0.073 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
-        
-        
-
-        tau = step_param / op_norm  # Step size for the primal variable
-        sigma = step_param / op_norm  # Step size for the dual variable
-        
-        
-        
-        # Choose a starting point
-        x = reco_space.zero()
-        #x = 0.5*phantom
-        
-        # Run the algorithm
-        odl.solvers.pdhg(x, f, g, op, tau=tau, sigma=sigma, niter=niter,
-                         callback=callback)
+reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Simulated/Balls/dose_6000_double_obj_magn/landweber'
+saveto_path = reco_path+'/omega='+str(omega)+'_iterate_{}'
 
 
+
+reco = ray_trafo.domain.zero()
+callback = (odl.solvers.CallbackPrintIteration() &
+            odl.solvers.CallbackShow() &
+            odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
+                                                      step=50,
+                                                      impl='numpy'))
+
+
+#Landweber iterations
+nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
+
+
+
+odl.solvers.landweber(forward_op, reco, data, maxiter, omega=omega,
+                      callback=callback,projection=nonneg_projection)
+
+
+#%%
+
+forward_op = lin_op
+
+maxiter = 51
+op_norm = 1.1 * 0.073 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
+
+omega = 1 / (op_norm ** 2)
+
+reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Simulated/Balls/dose_6000_double_obj_magn/landweber_lin'
+saveto_path = reco_path+'/omega='+str(omega)+'_iterate_{}'
+
+
+
+reco = ray_trafo.domain.zero()
+callback = (odl.solvers.CallbackPrintIteration() &
+            odl.solvers.CallbackShow() &
+            odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
+                                                      step=50,
+                                                      impl='numpy'))
+
+
+#Landweber iterations
+nonneg_projection = etomo.get_nonnegativity_projection(reco_space)
+
+
+
+odl.solvers.landweber(forward_op, reco, data, maxiter, omega=omega,
+                      callback=callback,projection=nonneg_projection)

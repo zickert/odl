@@ -113,9 +113,9 @@ data = forward_op.range.element(np.transpose(data - detector_zero_level,
 data = etomo.buffer_correction(data)
 #%%
 
-reg_par_list = [2.5e-4, 3.75e-4, 5e-4, 6.25e-4, 7.5e-4]
+reg_par_list = [5e-4]
 gamma_huber_list = [1e-2]
-maxiter = 1001
+maxiter = 5001
 
 reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Experimental/Region1/gradient_descent_huber_reg'
 

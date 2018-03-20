@@ -29,13 +29,27 @@ phantom -= bg_cst
 
 #%%
 
-iter_list = [1000, 2000, 3000]
-op_norm = 1.1 * 0.073 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
-omega = 1 / (op_norm ** 2)
+#iter_list = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000]
+#
+#
+#method_path_list = ['Simulated/Balls/no_noise/landweber',
+#                    'Simulated/Balls/no_noise/landweber_lin',
+#                    'Simulated/Balls/no_noise_double_obj_magn/landweber',
+#                    'Simulated/Balls/no_noise_double_obj_magn/landweber_lin'] 
+iter_list = [50]
+method_path_list = ['Simulated/Balls/dose_6000/landweber',
+                    'Simulated/Balls/dose_6000/landweber_lin'] 
 
-method_path_list = ['Simulated/Balls/no_noise/landweber', 'Simulated/Balls/no_noise/landweber_lin'] 
+
 for iterate in iter_list:
     for method_path in method_path_list:
+        
+        if 'double_obj_magn' not in method_path:
+            op_norm = 1.1 * 0.073 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
+        else:
+            op_norm = 1.1 * 0.133 # 1.1 * odl.power_method_opnorm(forward_op.derivative(reco_space.zero()))
+        omega = 1 / (op_norm ** 2)
+        
         param_path = '/omega='+str(omega)+'_iterate_' + str(iterate)
         path = base_path + method_path + param_path + '.npy'
         fig_path = base_path + method_path + param_path + '.png'
@@ -50,35 +64,44 @@ for iterate in iter_list:
 
 #%%
 
-iterate = 609
-num_cycles = 10
+#iterate = 609
+#num_cycles = 10
+#
+#reg_param_list = [1e-5, 1e-4, 1e-3, 3e2, 9e2, 3e3, 9e3, 3e4]
+#gamma_H1_list = [0.0, 0.9, 0.95, 0.99]
+#Niter_CG_list = [20, 30, 40]
+#
+#method_path = 'Simulated/Balls/dose_6000/kaczmarz'
 
-reg_param_list = [1e-5, 1e-4, 1e-3, 3e2, 9e2, 3e3, 9e3, 3e4]
-gamma_H1_list = [0.0, 0.9, 0.95, 0.99]
-Niter_CG_list = [20, 30, 40]
+method_path_list = ['Simulated/Balls/no_noise/kaczmarz',
+                    'Simulated/Balls/no_noise_double_obj_magn/kaczmarz']
+reg_param_list = [1e-5, 1e-4, 1e-3]
+gamma_H1_list = [0.0]
+num_cycles_list = [1,2,3,5,10]
+Niter_CG_list = [30]
 
-#method_path = 'Simulated/Balls/no_noise/kaczmarz'
-method_path = 'Simulated/Balls/dose_6000/kaczmarz'
-
-
-
-for reg_param in reg_param_list:
-    for gamma_H1 in gamma_H1_list:
-        for Niter_CG in Niter_CG_list:
-            try:
-                param_path = '/gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'_iterate_' + str(iterate) 
-                path = base_path + method_path + param_path + '.npy'
-                fig_path = base_path + method_path + param_path + '.png'
-               
-                reco_array = np.load(path)
-                reco = reco_space.element(reco_array)
-                reco.show(title=method_path+'\n'+param_path+'\n'
-                          +'SSIM='+str(ssim(phantom.asarray(), reco.asarray()))
-                          +', PSNR='+str(psnr(phantom.asarray(), reco.asarray(),
-                                                   dynamic_range=np.max(phantom) - np.min(phantom))),
-                                              saveto=fig_path)
-            except:
-                pass
+for method_path in method_path_list:
+    for num_cycles in num_cycles_list:
+        for reg_param in reg_param_list:
+            for gamma_H1 in gamma_H1_list:
+                for Niter_CG in Niter_CG_list:
+                    try:
+                        
+                        iterate = (61 * num_cycles) - 1 
+                        
+                        param_path = '/gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'_iterate_' + str(iterate) 
+                        path = base_path + method_path + param_path + '.npy'
+                        fig_path = base_path + method_path + param_path + '.png'
+                       
+                        reco_array = np.load(path)
+                        reco = reco_space.element(reco_array)
+                        reco.show(title=method_path+'\n'+param_path+'\n'
+                                  +'SSIM='+str(ssim(phantom.asarray(), reco.asarray()))
+                                  +', PSNR='+str(psnr(phantom.asarray(), reco.asarray(),
+                                                           dynamic_range=np.max(phantom) - np.min(phantom))),
+                                                      saveto=fig_path)
+                    except:
+                        pass
 
 # %%
 #iterate = 1000
@@ -90,9 +113,9 @@ for reg_param in reg_param_list:
 
 reg_param_list = [1e-4, 3e-4, 1e-3, 3e-3]
 step_param_list = [1e-3, 1e-2, 1e-1]
-iterate_list = [1000, 2000, 3000]
+iterate_list = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000]
 
-#
+
 #reg_param_list = [1e-7, 1e-6, 1e-5, 1e-4]
 #step_param_list = [1e-3, 1e-2, 1e-1]
 #iterate_list = [1000, 2000, 3000]  # Number of iterations
@@ -105,7 +128,8 @@ for iterate in iterate_list:
     for step_param in step_param_list:
         for reg_param in reg_param_list:
             try:
-                param_path = '/step_par='+str(step_param)+'_reg_par='+str(reg_param)+'_iterate_' + str(iterate) 
+                param_path = '/step_par='+str(step_param)+'_reg_par='+str(reg_param)+'_iterate_' + str(iterate)
+
                 path = base_path + method_path + param_path + '.npy'
                 fig_path = base_path + method_path + param_path + '.png'
                 
