@@ -10,7 +10,7 @@ from time import time
 from datetime import timedelta
 # Read data
 dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Experimental')
-file_path_data = os.path.join(dir_path, 'region1.mrc')
+file_path_data = os.path.join(dir_path, 'region3.mrc')
 angle_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Data/Experimental/tiltangles.txt'
 
 # load tiltangles
@@ -54,10 +54,10 @@ defocus = 6e-6  # m
 
 voxel_size = 0.4767e-9  # m
 
+
 nx = 512
 ny = 256 # y is tilt-axis
-nz = 200 # z is optical axis
-
+nz = 350 # z is optical axis
 
 # Reconstruction space: discretized functions on a cuboid
 reco_space = odl.uniform_discr(min_pt=[-rescale_factor*(nx/2)*voxel_size,
@@ -79,7 +79,6 @@ detector_partition = odl.uniform_partition([-rescale_factor*(nx/2)*voxel_size,
                                            [rescale_factor*(nx/2)*voxel_size,
                                             rescale_factor*(ny/2)*voxel_size],
                                            [nx, ny])
-
 
 # The y-axis is the tilt-axis.
 geometry = odl.tomo.Parallel3dAxisGeometry(angle_partition, detector_partition,
@@ -114,7 +113,7 @@ forward_op = imageFormation_op * ray_trafo
 
 data = forward_op.range.element(np.transpose(data - detector_zero_level,
                                              (2, 0, 1)))
-data = etomo.buffer_correction(data)
+data = etomo.buffer_correction(data, coords=[[0.75, 1], [0.75, 1]])
 
 # %% RECONSTRUCTION
 
