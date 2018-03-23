@@ -156,10 +156,10 @@ mismatch_lin = data-data_from_this_model_lin
 coords = [np.pi/3, [-50,-30], [-30,-10]]
 coords = [0, None, None]
 
-(data-np.mean(data)).show(coords=coords, title='TEM-Simulator data')
-(data_from_this_model-np.mean(data_from_this_model)).show(coords=coords, title='data from my op')
-(data_from_this_model_lin-np.mean(data_from_this_model_lin)).show(coords=coords, title='data from my lin op')
-nonlinearity.show(coords=coords, title='nonlinearity')
+(data-np.mean(data)).show(coords=coords, title='TEM-Simulator data', aspect='equal')
+(data_from_this_model-np.mean(data_from_this_model)).show(coords=coords, title='data from my op', aspect='equal')
+(data_from_this_model_lin-np.mean(data_from_this_model_lin)).show(coords=coords, title='data from my lin op', aspect='equal')
+nonlinearity.show(coords=coords, title='nonlinearity', aspect='equal')
 mismatch.show(coords=coords, title='mismatch')
 mismatch_lin.show(coords=coords, title='mismatch_lin')
 

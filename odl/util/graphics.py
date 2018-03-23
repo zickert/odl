@@ -241,7 +241,7 @@ def show_discrete_data(values, grid, title=None, method='',
             dsp_kwargs.update({'interpolation': interpolation,
                                'cmap': 'bone',
                                'extent': extent,
-                               'aspect': 'auto'})
+                               'aspect': 'equal'})
         elif method == 'scatter':
             pts = grid.points()
             args_re = [pts[:, 0], pts[:, 1], values.ravel().real]

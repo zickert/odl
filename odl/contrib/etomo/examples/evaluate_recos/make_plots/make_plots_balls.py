@@ -171,16 +171,16 @@ for step_param in step_param_list:
 #gamma_huber_list = [1e-2]
 
 
-#reg_par_list = [2.5e-4, 3.75e-4, 5e-4, 6.25e-4, 7.5e-4]
+reg_par_list = [3.75e-4]
+gamma_huber_list = [1e-2]
+iterate_list = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000]
+method_path = 'Simulated/Balls/dose_6000/gradient_descent_huber_reg'
+
+
+#reg_par_list = [1e-7, 1e-6, 1e-5, 1e-4]
 #gamma_huber_list = [1e-2]
 #iterate_list = [1000, 2000, 3000]
-#method_path = 'Simulated/Balls/dose_6000/gradient_descent_huber_reg'
-
-
-reg_par_list = [1e-7, 1e-6, 1e-5, 1e-4]
-gamma_huber_list = [1e-2]
-iterate_list = [1000, 2000, 3000]
-method_path = 'Simulated/Balls/no_noise/gradient_descent_huber_reg'
+#method_path = 'Simulated/Balls/no_noise/gradient_descent_huber_reg'
 
 
 

@@ -133,10 +133,10 @@ data = etomo.buffer_correction(data, coords=[[0, 0.1], [0, 0.1]])
 
 # %% RECONSTRUCTION
 
-reg_param_list = [3e2, 9e2, 3e3, 9e3]
-gamma_H1_list = [0.9, 0.95, 0.99]
-Niter_CG_list = [20]
-num_cycles = 10
+reg_param_list = [4e2, 9e2]
+gamma_H1_list = [0.925, 0.95]
+Niter_CG_list = [30]
+num_cycles = 3
 
 
 reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Simulated/Balls/dose_6000/kaczmarz'
@@ -152,10 +152,13 @@ for reg_param in reg_param_list:
             print('time: '+str(timedelta(seconds=time()-start)))
             saveto_path = reco_path+'/_gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'_iterate_{}'
             
-            callback = odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
+            callback = (odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
                                                       step=num_angles*num_cycles-1,
-                                                      impl='numpy')
-        
+                                                      impl='numpy') &
+                                                      odl.solvers.CallbackPrintIteration() 
+                                                     & odl.solvers.CallbackShow())
+
+
     
             reco = ray_trafo.domain.zero()
             

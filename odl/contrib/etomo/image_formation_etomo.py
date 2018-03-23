@@ -327,7 +327,7 @@ def make_imageFormationOp(domain, wave_number, spherical_abe, defocus,
 
     elif normalize:
         # The normalizing constant is given by the forward op. applied to zero.
-        # Data generated with this setting enabled need to be buffer corrected.
+        # Data generated with this setting enabled need no buffer correction.
         normalizing_cst = (1/(2*np.pi)) **2
     
         return normalizing_cst * intens_op * optics_op * exp_op * ratio_op

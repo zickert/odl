@@ -151,11 +151,13 @@ for reg_param in reg_param_list:
 
         saveto_path = reco_path+'/step_par='+str(step_param)+'_reg_par='+str(reg_param)+'_iterate_{}'
         
-        callback = odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
+        callback = (odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
                                                   step=steps_to_save,
-                                                  impl='numpy')
+                                                  impl='numpy') &
+                                                  odl.solvers.CallbackPrintIteration() 
+                                                  & odl.solvers.CallbackShow())
+
     
-        
         
         # Initialize gradient operator
         gradient = odl.Gradient(reco_space)
