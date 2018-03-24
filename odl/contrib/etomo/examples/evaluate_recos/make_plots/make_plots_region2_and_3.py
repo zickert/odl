@@ -43,8 +43,8 @@ for reg_param in reg_param_list:
     for gamma_H1 in gamma_H1_list:
         for Niter_CG in Niter_CG_list:
             try:
-                method_path = 'Experimental/Region1/kaczmarz'
-                param_path = '/gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'_iterate_' + str(iterate) 
+                method_path = 'Experimental/Region1/kaczmarz/'
+                param_path = 'gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'_iterate_' + str(iterate) 
                 path = base_path + method_path + param_path + '.npy'
 #               fig_path = base_path + method_path + param_path + '.png'
                 fig_path = base_path_fig + method_path + param_path + '.png'
@@ -63,64 +63,64 @@ for reg_param in reg_param_list:
 #%%
                 
             
-iterate = 1000
-
-#step_param_list = [1e-4, 1e-3, 1e-2, 1e-1]
-#reg_param_list = [1e-4]
-
-
-
-
-
-iter_list = [5000]
-reg_param_list = [6e-4]
-step_param_list = [2e-2]
-
-
-
-for iterate in iter_list:
-    for step_param in step_param_list:
-        for reg_param in reg_param_list:
-            try:
-                method_path = 'Experimental/Region1/pdhg_tv_pos_constr'
-                param_path = '/step_par='+str(step_param)+'_reg_par='+str(reg_param)+'_iterate_' + str(iterate) 
-                path = base_path + method_path + param_path + '.npy'
-#               fig_path = base_path + method_path + param_path + '.png'
-                fig_path = base_path_fig + method_path + param_path + '.png'
-
-
-                reco_array = np.load(path) 
-                reco = reco_space.element(reco_array)
-#               reco.show(title=method_path+'\n'+param_path, saveto=fig_path)
-                reco.show(saveto=fig_path)
-            except:
-                pass
-    
-
-
-#%%
-#reg_par_list = [5e-4, 2.5e-4, 7.5e-4]
+#iterate = 1000
+#
+##step_param_list = [1e-4, 1e-3, 1e-2, 1e-1]
+##reg_param_list = [1e-4]
+#
+#
+#
+#
+#
+#iter_list = [5000]
+#reg_param_list = [6e-4]
+#step_param_list = [2e-2]
+#
+#
+#
+#for iterate in iter_list:
+#    for step_param in step_param_list:
+#        for reg_param in reg_param_list:
+#            try:
+#                method_path = 'Experimental/Region1/pdhg_tv_pos_constr'
+#                param_path = '/step_par='+str(step_param)+'_reg_par='+str(reg_param)+'_iterate_' + str(iterate) 
+#                path = base_path + method_path + param_path + '.npy'
+##               fig_path = base_path + method_path + param_path + '.png'
+#                fig_path = base_path_fig + method_path + param_path + '.png'
+#
+#
+#                reco_array = np.load(path) 
+#                reco = reco_space.element(reco_array)
+##               reco.show(title=method_path+'\n'+param_path, saveto=fig_path)
+#                reco.show(saveto=fig_path)
+#            except:
+#                pass
+#    
+#
+#
+##%%
+##reg_par_list = [5e-4, 2.5e-4, 7.5e-4]
+##gamma_huber_list = [1e-2]
+#
+#
+#reg_par_list = [5e-4]
 #gamma_huber_list = [1e-2]
-
-
-reg_par_list = [5e-4]
-gamma_huber_list = [1e-2]
-iterate_list = [1000, 2000, 3000, 4000, 5000]
-
-method_path = 'Experimental/Region1/gradient_descent_huber_reg'
-
-for iterate in iterate_list:
-    for gamma_huber in gamma_huber_list:
-        for reg_par in reg_par_list:
-          
-            param_path = '/_gamma='+str(gamma_huber)+'_reg_par='+str(reg_par)+'_iterate_' + str(iterate) 
-            path = base_path + method_path + param_path + '.npy'
-            fig_path = base_path + method_path + param_path + '.png'
-            
-            reco_array = np.load(path)
-            reco = reco_space.element(reco_array)
-            reco.show(title=method_path+'\n'+param_path,
-                      saveto=fig_path)
-    
-    
-
+#iterate_list = [1000, 2000, 3000, 4000, 5000]
+#
+#method_path = 'Experimental/Region1/gradient_descent_huber_reg'
+#
+#for iterate in iterate_list:
+#    for gamma_huber in gamma_huber_list:
+#        for reg_par in reg_par_list:
+#          
+#            param_path = '/_gamma='+str(gamma_huber)+'_reg_par='+str(reg_par)+'_iterate_' + str(iterate) 
+#            path = base_path + method_path + param_path + '.npy'
+#            fig_path = base_path + method_path + param_path + '.png'
+#            
+#            reco_array = np.load(path)
+#            reco = reco_space.element(reco_array)
+#            reco.show(title=method_path+'\n'+param_path,
+#                      saveto=fig_path)
+#    
+#    
+#
