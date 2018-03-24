@@ -28,7 +28,8 @@ reco_space = odl.uniform_discr(min_pt=[-rescale_factor*(nx/2)*voxel_size,
 
 
 base_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/'
-base_path_fig = '/home/zickert/ET-paper/Plots/Reconstructions/'
+#base_path_fig = '/home/zickert/ET-paper/Plots/Reconstructions/'
+base_path_fig = '/mnt/imagingnas/data/Users/gzickert/TEM/Plots/Reconstructions/'
 
 
 # %% 
