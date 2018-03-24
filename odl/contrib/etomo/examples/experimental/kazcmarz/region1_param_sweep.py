@@ -33,7 +33,6 @@ sigma = e_mass * e_charge / (wave_number * planck_bar ** 2)
 
 abs_phase_ratio = 0.1
 obj_magnitude = sigma / rescale_factor
-regpar = 3e3
 num_angles = 81
 num_angles_per_block = 1
 num_cycles = 3
@@ -118,11 +117,11 @@ data = etomo.buffer_correction(data)
 
 # %% RECONSTRUCTION
 
-reg_param_list = [3e2, 3e3, 3e4]
-gamma_H1_list = [0.8, 0.9, 0.95, 0.99]
+reg_param_list = [3e3, 1e3]
+gamma_H1_list = [0.95, 0.9]
 Niter_CG_list = [30]
 
-reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Experimental/Region1/kaczmarz'
+reco_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/Experimental/Region1/kaczmarz/'
 
 start = time()
 
@@ -134,7 +133,7 @@ for reg_param in reg_param_list:
             print('NiterCG= '+str(Niter_CG))
             print('time: '+str(timedelta(seconds=time()-start)))
 
-            saveto_path = reco_path+'_gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'/iterate_{}'
+            saveto_path = reco_path+'gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'_iterate_{}'
             
             callback = odl.solvers.CallbackSaveToDisk(saveto=saveto_path,
                                                       step=num_angles*num_cycles-1,

@@ -10,8 +10,7 @@ voxel_size = 0.4767e-9  # m
 
 nx = 512
 ny = 256 # y is tilt-axis
-nz = 200 # z is optical axis
-
+nz = 350 # z is optical axis
 
 # Reconstruction space: discretized functions on a cuboid
 reco_space = odl.uniform_discr(min_pt=[-rescale_factor*(nx/2)*voxel_size,
@@ -24,10 +23,9 @@ reco_space = odl.uniform_discr(min_pt=[-rescale_factor*(nx/2)*voxel_size,
 
 
 
-base_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/'
-#base_path_fig = '/home/zickert/ET-paper/Plots/Reconstructions/'
-base_path_fig = '/mnt/imagingnas/data/Users/gzickert/TEM/Plots/Reconstructions/'
 
+base_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Reconstructions/'
+base_path_fig = '/home/zickert/ET-paper/Plots/Reconstructions/'
 
 
 # %% 
@@ -36,16 +34,17 @@ num_angles = 81
 iterate = (num_cycles * num_angles) - 1
 
 
-reg_param_list = [3e2, 3e3, 3e4]
-gamma_H1_list = [0.8, 0.9, 0.95, 0.99]
+reg_param_list = [3e3, 1e3]
+gamma_H1_list = [0.95, 0.9]
 Niter_CG_list = [30]
+
 
 for reg_param in reg_param_list:
     for gamma_H1 in gamma_H1_list:
         for Niter_CG in Niter_CG_list:
             try:
-                method_path = 'Experimental/Region1/kaczmarz/'
-                param_path = 'gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'_iterate_' + str(iterate) 
+                method_path = 'Experimental/Region1/kaczmarz'
+                param_path = '/gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'_iterate_' + str(iterate) 
                 path = base_path + method_path + param_path + '.npy'
 #               fig_path = base_path + method_path + param_path + '.png'
                 fig_path = base_path_fig + method_path + param_path + '.png'
