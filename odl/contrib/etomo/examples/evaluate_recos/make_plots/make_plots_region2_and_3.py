@@ -46,7 +46,40 @@ for reg_param in reg_param_list:
     for gamma_H1 in gamma_H1_list:
         for Niter_CG in Niter_CG_list:
             try:
-                method_path = 'Experimental/Region1/kaczmarz/'
+                method_path = 'Experimental/Region2/kaczmarz/'
+                param_path = 'gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'_iterate_' + str(iterate) 
+                path = base_path + method_path + param_path + '.npy'
+#               fig_path = base_path + method_path + param_path + '.png'
+                fig_path = base_path_fig + method_path + param_path + '.png'
+
+
+                reco_array = np.load(path) 
+                reco = reco_space.element(reco_array)
+#               reco.show(title=method_path+'\n'+param_path, saveto=fig_path)
+                reco.show(saveto=fig_path)
+
+            except:
+                pass
+
+
+
+
+# %% 
+num_cycles = 3
+num_angles = 81
+iterate = (num_cycles * num_angles) - 1
+
+
+reg_param_list = [3e3, 1e3]
+gamma_H1_list = [0.95, 0.9]
+Niter_CG_list = [30]
+
+
+for reg_param in reg_param_list:
+    for gamma_H1 in gamma_H1_list:
+        for Niter_CG in Niter_CG_list:
+            try:
+                method_path = 'Experimental/Region3/kaczmarz/'
                 param_path = 'gamma_H1='+str(gamma_H1)+'_reg_par='+str(reg_param)+'_niter_CG='+str(Niter_CG)+'_num_cycles='+str(num_cycles)+'_iterate_' + str(iterate) 
                 path = base_path + method_path + param_path + '.npy'
 #               fig_path = base_path + method_path + param_path + '.png'
