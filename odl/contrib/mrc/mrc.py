@@ -614,8 +614,6 @@ extended-mrc-format-not-used-by-2dx
         data = data.reshape(self.data_shape, order='F')
         if swap_axes:
             data = np.transpose(data, axes=self.data_axis_order)
-            print(data.shape)
-            print(self.data_shape)
 #            assert data.shape == self.data_shape
         return data
 

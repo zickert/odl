@@ -9,12 +9,12 @@ from odl.contrib.mrc import FileReaderMRC
 from time import time
 from datetime import timedelta
 # Read data
-#dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Experimental')
-dir_path = os.path.abspath('/home/zickert')
+dir_path = os.path.abspath('/mnt/imagingnas/data/Users/gzickert/TEM/Data/Experimental')
+#dir_path = os.path.abspath('/home/zickert')
 
 file_path_data = os.path.join(dir_path, 'region3.mrc')
-#angle_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Data/Experimental/tiltangles.txt'
-angle_path = '/home/zickert/tiltangles.txt'
+angle_path = '/mnt/imagingnas/data/Users/gzickert/TEM/Data/Experimental/tiltangles.txt'
+#angle_path = '/home/zickert/tiltangles.txt'
 
 
 # load tiltangles
@@ -116,14 +116,18 @@ forward_op = imageFormation_op * ray_trafo
 #invert data before subtracting minimum
 #data = -data
 
-#detector_zero_level = 0
+detector_zero_level = 0
 data = forward_op.range.element(np.transpose(data - detector_zero_level,
                                              (2, 0, 1)))
+
+
+for n in range(81):
+    data.asarray()[n,:,:] -= np.min(data.asarray(), (1,2))[n]
 
 #invert data after subtracting minimum
 #data = -data
 
-data = etomo.buffer_correction(data, coords=[[0.75, 1], [0.75, 1]])
+#data = etomo.buffer_correction(data, coords=[[0.75, 1], [0.75, 1]])
 
 # %% RECONSTRUCTION
 
