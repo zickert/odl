@@ -89,10 +89,10 @@ for path in path_list:
     plt.savefig(fig_path, bbox_inches='tight')
     
 #%%
-# Plot experimental data including large micrograph containing experimental sub-data
+# Plot experimental data 
 dir_path = '/mnt/imagingnas/Reference/TEM/Data/Tilt-series/Experimental/FEI/In-vitro_test_specimen'
 path_list = ['/region1.mrc', '/region2.mrc', '/region3.mrc', '/series2_aligned.mrc']
-path_list = ['/series2_aligned.mrc']
+
 
 
 for path in path_list:
@@ -110,6 +110,33 @@ for path in path_list:
         os.makedirs(os.path.dirname(fig_path))
     
     plt.savefig(fig_path, bbox_inches='tight')
+    
+#%%
+# Plot large micrograph containing experimental sub-data
+dir_path = '/mnt/imagingnas/Reference/TEM/Data/Tilt-series/Experimental/FEI/In-vitro_test_specimen'
+path = '/series2_aligned.mrc'
+
+
+with FileReaderMRC(dir_path + path) as reader:
+    header, data = reader.read()
+data = np.transpose(data, axes=(2, 0, 1))   
+plt.figure()         
+plt.axis('off')
+orthoslice = data[40,:, :].T
+plt.imshow(orthoslice, origin='lower', cmap='bone')
+
+fig_path = NAS_plots_path + '/Data/Experimental/' + path[:-4] + '.png'
+
+if not os.path.isdir(os.path.dirname(fig_path)):
+    os.makedirs(os.path.dirname(fig_path))
+
+plt.savefig(fig_path, bbox_inches='tight', dpi = 1000)
+
+    
+
+
+
+    
 #%%    
 # Plots recos for the balls
 path_list = []
