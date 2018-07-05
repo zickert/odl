@@ -11,6 +11,9 @@ import odl
 from odl.contrib import etomo
 from skimage import exposure
 
+from matplotlib_scalebar.scalebar import ScaleBar
+
+
 NAS_data_path = '/mnt/imagingnas/data/Users/gzickert/TEM'
 NAS_reco_path = NAS_data_path + '/Reconstructions'
 NAS_plots_path = NAS_data_path + '/Plots'
@@ -68,6 +71,14 @@ rect3 = patches.Rectangle((3481-256,2525-128),512,256,linewidth=1,edgecolor='r',
 ax.add_patch(rect1)
 ax.add_patch(rect2)
 ax.add_patch(rect3)
+
+
+# Add scale-bar   
+M = 29370.0
+det_pix_size = 14e-6
+scalebar = ScaleBar(det_pix_size/M, length_fraction=0.3)
+plt.gca().add_artist(scalebar)
+
 
 plt.show()
 
