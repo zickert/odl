@@ -77,3 +77,19 @@ def test_cast_operator(reco_space):
 
 if __name__ == '__main__':
     odl.util.test_file(__file__)
+
+# Test for adjoint moved here from an example
+#if __name__ == '__main__':
+#    odl.util.test_file(__file__)
+#
+#
+#    x_adj = reco_space.one() + odl.phantom.white_noise(reco_space)
+#    y_adj = forward_op_linearized.range.one() + odl.phantom.white_noise(forward_op_linearized.range)
+#
+#    Ax_adj = forward_op_linearized(x_adj)
+#    ATy_adj = forward_op_linearized.adjoint(y_adj)
+#
+#    ip1 = x_adj.inner(ATy_adj)
+#    ip2 = Ax_adj.inner(y_adj)
+#
+#    assert pytest.approx(ip1.real,rel=5e-2) == ip2.real

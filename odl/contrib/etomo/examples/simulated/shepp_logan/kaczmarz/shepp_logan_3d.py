@@ -6,7 +6,7 @@ import odl
 from timeit import timeit
 from odl.contrib import etomo
 
-
+abs_phase_ratio = 0.1
 obj_magnitude = 1e-2
 
 # Relative noise level
@@ -26,8 +26,11 @@ wave_number = 2 * np.pi / wave_length
 aper_rad = 0.5*40e-6  # m
 focal_length = 2.7e-3  # m
 spherical_abe = 2.1e-3  # m
+chromatic_abe = 2.2e-3  # m
 defocus = 3e-6  # m
-
+aper_angle = 0.1e-3  # rad
+acc_voltage = 200.0e3  # V
+mean_energy_spread = 1.3  # V
 # In this toy example, rescale_factor can be chosen arbitrarily, but 0.5e9 will
 # give a particle of roughly the same size as the rna_phantom from the
 # TEM-Simulator. A greater value of this factor means that the corresponding
@@ -54,11 +57,19 @@ ray_trafo = etomo.BlockRayTransform(reco_space, geometry)
 
 # The image-formation operator models the optics and the detector
 # of the electron microscope.
-imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range,
+imageFormation_op = etomo.make_imageFormationOp(ray_trafo.range, 
                                                 wave_number, spherical_abe,
                                                 defocus,
                                                 rescale_factor=rescale_factor,
-                                                obj_magnitude=obj_magnitude)
+                                                obj_magnitude=obj_magnitude,
+                                                abs_phase_ratio=abs_phase_ratio,
+                                                aper_rad=aper_rad,
+                                                aper_angle=aper_angle,
+                                                focal_length=focal_length,
+                                                mean_energy_spread=mean_energy_spread,
+                                                acc_voltage=acc_voltage,
+                                                chromatic_abe=chromatic_abe,
+                                                normalize=True)
 
 # Define a spherical mask to implement support constraint.
 mask = reco_space.element(etomo.spherical_mask, radius=19)
@@ -82,30 +93,37 @@ data += (noise_lvl * (forward_op(reco_space.zero())-data).norm() / noise.norm())
 delta = reco_space.element(etomo.spherical_mask,
                           radius=rescale_factor * 5.0e-10)
 
-forward_op(delta).show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
+#forward_op(delta).show(coords=[0, [-2e1, 2e1], [-2e1, 2e1]])
 
 
 # %%
 
 # Choose a starting point
-reco = reco_space.zero()
-
-# Optional: pass callback objects to solver
+reco = ray_trafo.domain.zero()
 callback = (odl.solvers.CallbackPrintIteration() &
-            odl.solvers.CallbackShow())
+            odl.solvers.CallbackShow() )
+
+
 
 
 kaczmarz_plan = etomo.make_kaczmarz_plan(num_angles,
                                          block_length=num_angles_per_block,
-                                         method='random')
+                                         method='mls')
 
 ray_trafo_block = ray_trafo.get_sub_operator(kaczmarz_plan[0])
 
-
 F_post = etomo.make_imageFormationOp(ray_trafo_block.range,
-                                     wave_number, spherical_abe, defocus,
+                                     wave_number, spherical_abe,
+                                     defocus,
                                      rescale_factor=rescale_factor,
-                                     obj_magnitude=obj_magnitude)
+                                     obj_magnitude=obj_magnitude,
+                                     abs_phase_ratio=abs_phase_ratio,
+                                     aper_rad=aper_rad, aper_angle=aper_angle,
+                                     focal_length=focal_length,
+                                     mean_energy_spread=mean_energy_spread,
+                                     acc_voltage=acc_voltage,
+                                     chromatic_abe=chromatic_abe,
+                                     normalize=True)
 
 F_pre = odl.MultiplyOperator(mask, reco_space, reco_space)
 
@@ -130,36 +148,3 @@ etomo.kaczmarz_SART_method(get_proj_op, reco, get_data, len(kaczmarz_plan),
                            callback=callback, num_cycles=num_cycles,
                            projection=nonneg_projection)
 
-# %%
-
-#reco = reco_space.zero()
-#kaczmarz_reco_method(get_op, reco, get_data, len(kaczmarz_plan),
-#                     regpar * obj_magnitude ** 2, callback=callback,
-#                     num_cycles=num_cycles, niter_CG=10,
-#                     projection=nonneg_projection)
-
-
-#reco_lin = reco_space.zero()
-#
-#odl.solvers.conjugate_gradient_normal(forward_op.derivative(reco_lin),
-#                                      reco_lin, data - forward_op(reco_lin),
-#                                      niter=100, callback=callback)
-
-
-#reco = reco_space.zero()
-#callback = (odl.solvers.CallbackPrintIteration() &
-#            odl.solvers.CallbackShow())
-#odl.solvers.conjugate_gradient_normal(forward_op, reco, data,
-#                                      niter=10, callback=callback)
-## non-linear cg must be adapted to complex case
-##func = odl.solvers.L2NormSquared(data.space).translated(data) * forward_op
-##odl.solvers.conjugate_gradient_nonlinear(func, reco, line_search=1e0, callback=callback,
-##                                         nreset=50)
-#
-##func = odl.solvers.L2NormSquared(data.space).translated(data) * forward_op
-##odl.solvers.conjugate_gradient_nonlinear(func, reco, line_search=1e0, callback=callback,
-##                                         nreset=50)
-#
-#
-#lin_at_one = forward_op.derivative(forward_op.domain.one())
-#backprop = lin_at_one.adjoint(data)
