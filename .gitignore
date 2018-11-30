@@ -87,7 +87,7 @@ target/
 .idea
 
 # IPython / Jupyter notebook files
-*.ipynb
+#*.ipynb
 .ipynb_checkpoints
 
 # Documentation build files
